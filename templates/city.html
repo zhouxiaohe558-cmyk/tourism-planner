@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>漫游中国 · 热门城市灵感集 | 半透明背景意境</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: system-ui, 'Segoe UI', '微软雅黑', 'PingFang SC', Roboto, sans-serif;
+    }
+
+    /* ========= 全局背景 + 半透明图片层 (透明度50%) ========= */
+    body {
+      background: #fef7ef;
+      padding: 50px 24px 80px;
+      position: relative;
+      min-height: 100vh;
+    }
+
+    /* ✅ 半透明背景图 (透明度 50%) */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("https://ts1.tc.mm.bing.net/th/id/R-C.2ea4c5b998603f8c2063c80f8f9928b5?rik=3Ks8xULgcFIU2Q&riu=http%3a%2f%2fimg.xintp.com%2f2019%2f12%2f10%2fta0ybcui0lh.jpg&ehk=fBDxTTIr1rLMFa4DcH%2f2db4qQTMEAvmS4GL%2faUZwDd0%3d&risl=&pid=ImgRaw&r=0");
+      background-size: cover;
+      background-position: center 30%;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      opacity: 0.5;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* 优雅噪点叠加层 */
+    body::after {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 20% 40%, rgba(255,215,170,0.08) 2%, transparent 2.5%);
+      background-size: 35px 35px;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* 主要内容区浮在背景之上 */
+    .wrapper {
+      max-width: 1300px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 5;
+    }
+
+    /* 标题区设计 */
+    .title-section {
+      text-align: center;
+      margin-bottom: 55px;
+      animation: fadeInDown 0.7s ease;
+      backdrop-filter: blur(2px);
+    }
+    .main-title {
+      font-size: 3.3rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #B5450C, #E07A2C, #F6AD55);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      letter-spacing: -0.5px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .sub-title {
+      font-size: 1.1rem;
+      color: #AD6B35;
+      margin-top: 14px;
+      font-weight: 500;
+      background: rgba(255,245,230,0.7);
+      display: inline-block;
+      padding: 6px 24px;
+      border-radius: 60px;
+      backdrop-filter: blur(4px);
+    }
+
+    /* 城市卡片网格 */
+    .city-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 32px;
+      margin-bottom: 30px;
+    }
+
+    .city-card {
+      background: rgba(255, 252, 245, 0.92);
+      backdrop-filter: blur(6px);
+      border-radius: 40px;
+      overflow: hidden;
+      box-shadow: 0 20px 32px -12px rgba(0, 0, 0, 0.18);
+      transition: all 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+      cursor: pointer;
+      border: 1px solid rgba(255, 215, 160, 0.6);
+    }
+
+    .city-card:hover {
+      transform: translateY(-8px);
+      background: rgba(255, 255, 250, 0.98);
+      box-shadow: 0 30px 45px -12px rgba(0, 0, 0, 0.28);
+      border-color: #FFC085;
+    }
+
+    .card-img {
+      width: 100%;
+      height: 260px;
+      object-fit: cover;
+      transition: transform 0.5s ease;
+    }
+    .city-card:hover .card-img {
+      transform: scale(1.02);
+    }
+
+    .card-content {
+      padding: 24px 20px 28px;
+      text-align: center;
+    }
+
+    .city-name {
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: #4E2C1A;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .city-tagline {
+      font-size: 0.85rem;
+      color: #C4622A;
+      font-weight: 600;
+      background: #FFF0E0;
+      display: inline-block;
+      padding: 4px 18px;
+      border-radius: 40px;
+      margin-top: 6px;
+    }
+
+    /* 弹窗轻奢杂志风格 */
+    .modal-mask {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(12px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-container {
+      width: 90%;
+      max-width: 1150px;
+      background: #FFFCF5;
+      border-radius: 48px;
+      max-height: 88vh;
+      overflow-y: auto;
+      box-shadow: 0 40px 70px rgba(0, 0, 0, 0.4);
+      animation: scaleIn 0.25s ease-out;
+      position: relative;
+    }
+
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.96);}
+      to { opacity: 1; transform: scale(1);}
+    }
+
+    .modal-header {
+      position: sticky;
+      top: 0;
+      background: #FFFCF5;
+      padding: 26px 36px 18px;
+      border-bottom: 2px solid #FFDFB3;
+      border-radius: 48px 48px 0 0;
+      z-index: 12;
+    }
+
+    .modal-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #B85322;
+      margin: 0;
+    }
+    .modal-close {
+      position: absolute;
+      top: 26px;
+      right: 32px;
+      font-size: 32px;
+      font-weight: 400;
+      color: #B87A4A;
+      cursor: pointer;
+      transition: 0.2s;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 60px;
+      background: #F3E9DE;
+    }
+    .modal-close:hover {
+      background: #FF7E5E;
+      color: white;
+      transform: rotate(90deg);
+    }
+
+    .modal-body {
+      padding: 24px 36px 48px;
+    }
+
+    /* 板块 */
+    .section-block {
+      margin-bottom: 52px;
+    }
+    .block-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 28px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      border-left: 6px solid #F7A35C;
+      padding-left: 18px;
+      color: #3F2A1C;
+    }
+    .block-title span {
+      font-size: 1.8rem;
+    }
+
+    /* 双列瀑布流卡片 */
+    .card-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 30px;
+    }
+
+    .info-card {
+      background: #FFFFFF;
+      border-radius: 32px;
+      overflow: hidden;
+      transition: 0.25s;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+      border: 1px solid #FCE1BF;
+    }
+    .info-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 28px -12px rgba(0, 0, 0, 0.18);
+      border-color: #F7BA7A;
+    }
+    .card-media {
+      width: 100%;
+      height: 190px;
+      object-fit: cover;
+      transition: transform 0.4s;
+    }
+    .info-card:hover .card-media {
+      transform: scale(1.02);
+    }
+    .card-text {
+      padding: 18px 20px 24px;
+    }
+    .item-name {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #874E2C;
+      margin-bottom: 8px;
+    }
+    .item-desc {
+      font-size: 0.9rem;
+      color: #6F5A48;
+      line-height: 1.48;
+    }
+
+    .footer-note {
+      text-align: center;
+      margin-top: 60px;
+      color: #C78F58;
+      font-size: 0.85rem;
+      background: rgba(255, 245, 230, 0.7);
+      backdrop-filter: blur(4px);
+      width: fit-content;
+      margin-left: auto;
+      margin-right: auto;
+      padding: 8px 24px;
+      border-radius: 60px;
+    }
+
+    /* ========= 右下角浮动按钮 - 页面切换，进入精选路线 ========= */
+    .floating-route-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      z-index: 1050;
+      background: linear-gradient(135deg, #FFA62E, #FF7A00);
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+      border: none;
+      outline: none;
+      backdrop-filter: blur(4px);
+    }
+    .floating-route-btn:hover {
+      transform: scale(1.08);
+      background: linear-gradient(135deg, #FFB84D, #FF8C1A);
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.3);
+    }
+    .floating-route-btn:active {
+      transform: scale(0.96);
+    }
+    .floating-route-btn span {
+      font-size: 28px;
+      font-weight: 600;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+    /* 小屏幕适配 */
+    @media (max-width: 680px) {
+      .floating-route-btn {
+        width: 54px;
+        height: 54px;
+        bottom: 20px;
+        right: 20px;
+      }
+      .floating-route-btn span {
+        font-size: 24px;
+      }
+      .main-title { font-size: 2.3rem; }
+      .modal-body { padding: 20px; }
+      .block-title { font-size: 1.5rem; }
+      .modal-title { font-size: 1.7rem; }
+      .city-name { font-size: 1.6rem; }
+    }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-25px);}
+      to { opacity: 1; transform: translateY(0);}
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="title-section">
+    <h1 class="main-title">🗺️ 漫游 · 中国热门城市</h1>
+    <div class="sub-title">每一座城，都有独特的风景与人间风味</div>
+  </div>
+
+  <div class="city-grid" id="cityGrid"></div>
+  <div class="footer-note">
+    🌟 轻触城市卡片 · 解锁地道景点 & 美食灵感
+  </div>
+</div>
+
+<!-- 弹窗结构 沉浸体验 -->
+<div class="modal-mask" id="modalMask">
+  <div class="modal-container">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modalTitle"></h2>
+      <div class="modal-close" id="modalCloseBtn">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="section-block">
+        <div class="block-title"><span>🏯</span> 必游景点 · 寻迹山川人文</div>
+        <div class="card-list" id="spotList"></div>
+      </div>
+      <div class="section-block">
+        <div class="block-title"><span>🍜</span> 风味人间 · 地道美食</div>
+        <div class="card-list" id="foodList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ 右下角浮动按钮：一键跳转精选路线页面 -->
+<div class="floating-route-btn" id="gotoRouteBtn">
+  <span>✨</span>
+</div>
+
+<script>
+  // ======================= 城市数据（丰富、图文并茂，涵盖真实感） =======================
+  const citiesData = [
+    {
+      id: "chongqing",
+      name: "重庆",
+      tagline: "8D魔幻山城 · 热辣江湖",
+      coverImg: "https://ts1.tc.mm.bing.net/th/id/R-C.9f20d26b8caedfa89c6d105a0c39e503?rik=nePFDQC2ZIlyBQ&riu=http%3a%2f%2fn.sinaimg.cn%2fsinakd10011%2f412%2fw1687h1125%2f20200322%2fdcd6-ireifzh5671706.jpg&ehk=csMXpfupkjyuOc3eWyAKREFvLg7oHf6dEUHkMuuMiw8%3d&risl=&pid=ImgRaw&r=0",
+      spots: [
+        { img: "https://ts4.tc.mm.bing.net/th/id/OIP-C.VJ8ztboyzSHG4GlCJjkcMgHaFh?rs=1&pid=ImgDetMain&o=7&rm=3", name: "洪崖洞", desc: "巴渝传统吊脚楼，夜晚灯光璀璨如现实版《千与千寻》，魔幻夜景地标。" },
+        { img: "https://img.shetu66.com/2023/05/12/1683857696879520.png?x-oss-process=image/resize,h_800/watermark,image_d2F0ZXJtYXJrL2JhY2tncm91cDAxLnBuZw==,g_se,x_0,y_10/watermark,text_6K6-5Zu-572RIOe8luWPtzo1NDQ0NjEzMzAzOTcxNDAyMTM=,type_ZmFuZ3poZW5naGVpdGk,color_FFFFFF,size_12,g_se,x_15,y_16", name: "长江索道", desc: "空中公交车，横跨长江，俯瞰山城立体交通与两江四岸壮丽画卷。" },
+        { img: "https://youimg1.c-ctrip.com/target/fd/tg/g4/M08/28/C8/CggYHFYxf0uAMjMGACNLjPVZ5Ec345_D_10000_1200.jpg?proc=autoorient", name: "武隆天生三桥", desc: "世界自然遗产，喀斯特奇观，《变形金刚4》取景地，天坑地缝震撼。" }
+      ],
+      foods: [
+        { img: "https://ts1.tc.mm.bing.net/th/id/OIP-C.ve0ST34gk3KvmpsMsNZmvgHaEU?rs=1&pid=ImgDetMain&o=7&rm=3", name: "洞子老火锅", desc: "九宫格牛油翻滚，毛肚鸭肠脆嫩，麻辣鲜香直击灵魂的山城味道。" },
+        { img: "https://ts3.tc.mm.bing.net/th/id/OIP-C.xYkL6pv_YgddlKlVzR0jowHaFW?rs=1&pid=ImgDetMain&o=7&rm=3", name: "酸辣粉", desc: "手工红薯粉搭配肉酱花生，酸爽开胃，街头巷尾的烟火气。" },
+        { img: "https://ts1.tc.mm.bing.net/th/id/R-C.f658384d2e7c71b11652b4db7055e3bf?rik=lMMqoOK7%2fz3swQ&riu=http%3a%2f%2fn.sinaimg.cn%2fsinakd20200704ac%2f266%2fw640h426%2f20200704%2f54cd-ivwfwmp3570301.jpg&ehk=Rfmc3pjktiG4QSbkWnI22dxHJ2ZwhcAoOrRtDbSOI9Y%3d&risl=&pid=ImgRaw&r=0", name: "江湖辣子鸡", desc: "焦香麻辣，外酥里嫩，山城江湖豪情的舌尖演绎。" }
+      ]
+    },
+    {
+      id: "xian",
+      name: "西安",
+      tagline: "千年古都 · 梦回长安",
+      coverImg: "https://p26.toutiaoimg.com/origin/tos-cn-i-qvj2lq49k0/1a3bb40804ea4ee1a5e1f45b44e32740",
+      spots: [
+        { img: "https://ts1.tc.mm.bing.net/th/id/R-C.a215332a521e4be82136ea760d50c275?rik=vrEUsD%2b4qLy6Rg&riu=http%3a%2f%2fp6.qhimg.com%2ft01ce237ec2d9d256e3.jpg&ehk=IfxxW9nybkCSa0qEqR2PM3HrXI63IoZoNn9XxqvPqbE%3d&risl=&pid=ImgRaw&r=0", name: "秦始皇兵马俑", desc: "世界第八大奇迹，两千年前的帝国军团，气势恢宏震撼。" },
+        { img: "https://youimg1.c-ctrip.com/target/0105d1200082o88gf0327.jpg", name: "大唐不夜城", desc: "流光溢彩的盛唐天街，不倒翁小姐姐，沉浸式长安十二时辰。" },
+        { img: "https://img1.qunarzz.com/travel/d2/1506/78/93580cb690ce6b.jpg_r_640x424x70_0cc4ded8.jpg", name: "西安城墙", desc: "中国现存规模最大古城墙，骑行俯瞰古都风貌，夕阳绝美。" }
+      ],
+      foods: [
+        { img: "https://ts2.tc.mm.bing.net/th/id/OIP-C.zITIgVDjs8324yoUFq3JhgHaE8?rs=1&pid=ImgDetMain&o=7&rm=3", name: "肉夹馍", desc: "腊汁肉夹白吉馍，外酥里嫩，馍香肉烂，秦味经典。" },
+        { img: "https://preview.qiantucdn.com/58pic/6P/Cc/ge/Iu/ob8iy7w4f3vler569qcud0px2sg1zmtk_PIC2018.png!w1024_new_small_1", name: "羊肉泡馍", desc: "亲手掰馍，配以浓汤羊肉，暖胃饱腹，老陕的仪式感。" },
+        { img: "https://ts1.tc.mm.bing.net/th/id/R-C.451405580c08ea78067ce1b24141c36c?rik=fxlSjwTu7BiSVw&riu=http%3a%2f%2fi5.szhomeimg.com%2fo%2f2022%2f09%2f12%2f0912175055988761.JPG&ehk=YJjYsn3bcy9CW%2fpeRXPhNAZCmXi88qkD2v2VhMKjNWI%3d&risl=&pid=ImgRaw&r=0", name: "Biangbiang面", desc: "裤带面油泼辣子，劲道酸香，关中人豪爽滋味。" }
+      ]
+    },
+    {
+      id: "lijiang",
+      name: "丽江",
+      tagline: "柔软时光 · 邂逅云南",
+      coverImg: "https://ts1.tc.mm.bing.net/th/id/R-C.3ad25a534834ee6621512d0e25d3c538?rik=%2fJsbVgRuTfWoFg&riu=http%3a%2f%2fyouimg1.c-ctrip.com%2ftarget%2ftg%2f613%2f327%2f876%2f58f766a8a30f4de696e1e4c887cd306f.jpg&ehk=lm3CgyBuyjXxW1AbHg%2fhsfPz59CiW0%2fKKzI7hlwN1go%3d&risl=1&pid=ImgRaw&r=0",
+      spots: [
+        { img: "https://ts1.tc.mm.bing.net/th/id/R-C.667a5adc1e65a0bef08dd1e75769eca6?rik=YkPn4WAWzj4Dkw&riu=http%3a%2f%2fyouimg1.c-ctrip.com%2ftarget%2f1002060000001q1me4C8E.jpg&ehk=SJK5L7M1Si6SXHx0Tt81%2fSPmj5XHhBjFWGxHmT15dW0%3d&risl=&pid=ImgRaw&r=0", name: "丽江古城", desc: "世界文化遗产，小桥流水，纳西风情，夜晚民谣酒馆浪漫。" },
+        { img: "https://youimg1.c-ctrip.com/target/0105z1200087cx1wxFB1B_D_10000_1200.jpg?proc=autoorient", name: "玉龙雪山", desc: "纳西神山，冰川蓝月谷，海拔4680米的心灵震撼。" },
+        { img: "https://ts1.tc.mm.bing.net/th/id/R-C.49c191afc6a7595dd5ec969832769ee9?rik=cSh5GrmHQjIPWw&riu=http%3a%2f%2fpic5.40017.cn%2fi%2fori%2fULueKNdANG.jpg&ehk=im4v9eA6pC%2fflq7C%2fUbEdnKgqDMNvj4GV0LmxpMEfhw%3d&risl=&pid=ImgRaw&r=0", name: "束河古镇", desc: "比大研更静谧，茶马古道遗风，晒太阳发呆的理想地。" }
+      ],
+      foods: [
+        { img: "https://att2.citysbs.com/jiaxing/2025/11/24/13/middle_3024x4032-135248_v3_11441763963569002_d517d5a8d7109cdf39ac9168d5c7b1fe.jpg", name: "腊排骨火锅", desc: "纳西传统腊味，咸鲜浓郁，配野菜暖心暖胃。" },
+        { img: "https://pic1.zhimg.com/v2-d83a2ec0a186c249b9d1e6738c3f0416_r.jpg?source=1940ef5c", name: "鸡豆凉粉", desc: "当地鸡豆制作，爽滑酸辣，古城街头必尝小吃。" },
+        { img: "https://gd4.alicdn.com/imgextra/i4/823259690/O1CN01sQAqo62LS4Wq2YO86_!!823259690.jpg", name: "鲜花饼", desc: "新鲜玫瑰花瓣入馅，酥香清甜，把云南花香带回家。" }
+      ]
+    },
+    {
+      id: "chengdu",
+      name: "成都",
+      tagline: "巴适得板 · 熊猫故乡",
+      coverImg: "https://pic2.zhimg.com/v2-a348da1be2de7f84b716dca2f07a85e7_1200x500.jpg",
+      spots: [
+        { img: "https://ts1.tc.mm.bing.net/th/id/R-C.6e87d87fe2c7550fad6016996b8c2dc5?rik=EDUlPj3wcU8X1Q&riu=http%3a%2f%2fvip-public.people.com.cn%2fphoto%2f2024%2f4%2f13%2f1eae027712d54492b6d82040645391e4h40h_s.jpg&ehk=Ogx7uYMEwsGqP4Xe3uGXiyTZ8nvugm5AAQeSY27sscM%3d&risl=&pid=ImgRaw&r=0", name: "大熊猫繁育基地", desc: "近距离观看软糯国宝，幼年熊猫爬树萌化人心。" },
+        { img: "https://img.pconline.com.cn/images/upload/upc/tx/itbbs/2004/18/c6/203644417_1587188253151_mthumb.jpg", name: "宽窄巷子", desc: "青砖黛瓦，老成都底片，盖碗茶与川剧变脸。" },
+        { img: "https://youimg1.c-ctrip.com/target/fd/tg/g5/M06/D3/95/CggYr1b5-cWAG-cYAD9huP_1GWc004_D_10000_1200.jpg?proc=autoorient", name: "青城山", desc: "青城天下幽，道教名山，徒步吸氧洗肺胜地。" }
+      ],
+      foods: [
+        { img: "https://n.sinaimg.cn/sinacn20119/213/w2048h1365/20190821/3eac-icmpfxc2103184.jpg", name: "成都火锅", desc: "清油锅底搭配蒜泥香油，麻辣温柔，千层肚脆爽。" },
+        { img: "https://img.91goodschool.com/UpFiles/ag/9606/2022/202112/21/165943422332.jpg", name: "蛋烘糕", desc: "外脆内软，甜咸皆可，成都人从小吃到大的街头记忆。" },
+        { img: "https://ts1.tc.mm.bing.net/th/id/R-C.b46441e3bb029af1bdb613b7cd89d5bc?rik=pEHTwZf1R3LF9A&riu=http%3a%2f%2fn.sinaimg.cn%2fsinakd20220305ac%2f40%2fw480h360%2f20220305%2f203b-140467dc230cd280b43e0bdccdef5a97.jpg&ehk=zD%2bPEtKC4EWv7Bawsl6Pj%2bVc6R1IicpcBlgB8LoWX54%3d&risl=&pid=ImgRaw&r=0", name: "甜水面", desc: "粗面裹甜辣酱汁，嚼劲十足，复合香味惊艳。" }
+      ]
+    },
+    {
+      id: "hangzhou",
+      name: "杭州",
+      tagline: "诗意江南 · 风雅钱塘",
+      coverImg: "https://picsum.photos/id/104/500/320",
+      spots: [
+        { img: "https://img1.qunarzz.com/travel/d3/1506/b7/85b46d23fc114a.jpg", name: "西湖", desc: "一湖映江南，苏堤春晓，断桥残雪，水墨画卷。" },
+        { img: "https://youimg1.c-ctrip.com/target/100b070000002p95p73BB.jpg", name: "灵隐寺", desc: "千年古刹，仙灵所隐，祈福静心的禅意之地。" },
+        { img: "https://ts1.tc.mm.bing.net/th/id/R-C.fc3de4b11eec51b005c408ec9cf71252?rik=soa2rUn4m03TtQ&riu=http%3a%2f%2fn.sinaimg.cn%2fsinacn11%2f756%2fw2048h1108%2f20180724%2fba78-hftenhz4596118.jpg&ehk=MPB5hTno8ejlQvI2e3IDY98IvhzhexOPr%2fWQmjxcF4Q%3d&risl=&pid=ImgRaw&r=0", name: "西溪湿地", desc: "一曲溪流一曲烟，摇橹船穿梭芦苇荡，野趣盎然。" }
+      ],
+      foods: [
+        { img: "https://img.redocn.com/sheying/20210525/xihucuyu_11501855.jpg", name: "西湖醋鱼", desc: "草鱼嫩滑酸甜适中，杭帮菜代表清雅风味。" },
+        { img: "https://ts1.tc.mm.bing.net/th/id/R-C.94f7a130ea7e73c194eea4a7673cc9f1?rik=rlhfe8gsXLg4%2fA&riu=http%3a%2f%2fcp1.douguo.net%2fupload%2fcaiku%2ff%2f0%2f9%2f600x400_f0638eb165f38e1c38473f928ab55c09.jpeg&ehk=Iz9%2b6Q8B3EMOt1NgZt2tHPd63TF1ezP9B8IXrpKpn9s%3d&risl=&pid=ImgRaw&r=0", name: "龙井虾仁", desc: "虾仁玉白，茶叶碧绿，茶香清口江南韵。" },
+        { img: "https://ts1.tc.mm.bing.net/th/id/R-C.9683bd00a98a10dcad1412de92ee54e0?rik=zo9BIIRhj4W6Ow&riu=http%3a%2f%2fpuui.qpic.cn%2fvpic_cover%2fp3082zvma1z%2fp3082zvma1z_hz.jpg%2f1280&ehk=JQ51Zhm9KCaTdX1tS6gAwZiwrGyg5TWxhNUkWZVvhus%3d&risl=&pid=ImgRaw&r=0", name: "定胜糕", desc: "玫瑰色松软糕点，寓意吉祥，南宋古味。" }
+      ]
+    }
+  ];
+
+  // 渲染城市卡片
+  const cityGrid = document.getElementById('cityGrid');
+  function renderCityCards() {
+    cityGrid.innerHTML = '';
+    citiesData.forEach(city => {
+      const card = document.createElement('div');
+      card.className = 'city-card';
+      card.setAttribute('data-id', city.id);
+      card.innerHTML = `
+        <img class="card-img" src="${city.coverImg}" alt="${city.name}" loading="lazy" onerror="this.src='https://picsum.photos/id/104/400/300'">
+        <div class="card-content">
+          <div class="city-name">${city.name}</div>
+          <div class="city-tagline">${city.tagline}</div>
+        </div>
+      `;
+      card.addEventListener('click', () => openCityModal(city.id));
+      cityGrid.appendChild(card);
+    });
+  }
+
+  // 获取城市完整数据
+  function getCityById(id) {
+    return citiesData.find(c => c.id === id);
+  }
+
+  // 弹窗元素
+  const modalMask = document.getElementById('modalMask');
+  const modalTitle = document.getElementById('modalTitle');
+  const spotList = document.getElementById('spotList');
+  const foodList = document.getElementById('foodList');
+  const closeBtn = document.getElementById('modalCloseBtn');
+
+  function openCityModal(cityId) {
+    const city = getCityById(cityId);
+    if (!city) return;
+    modalTitle.innerText = `${city.name} · 旅行灵感册`;
+
+    // 渲染景点
+    spotList.innerHTML = '';
+    city.spots.forEach(spot => {
+      const item = document.createElement('div');
+      item.className = 'info-card';
+      item.innerHTML = `
+        <img class="card-media" src="${spot.img}" alt="${spot.name}" loading="lazy" onerror="this.src='https://picsum.photos/id/29/400/280'">
+        <div class="card-text">
+          <div class="item-name">📍 ${spot.name}</div>
+          <div class="item-desc">${spot.desc}</div>
+        </div>
+      `;
+      spotList.appendChild(item);
+    });
+
+    // 渲染美食
+    foodList.innerHTML = '';
+    city.foods.forEach(food => {
+      const item = document.createElement('div');
+      item.className = 'info-card';
+      item.innerHTML = `
+        <img class="card-media" src="${food.img}" alt="${food.name}" loading="lazy" onerror="this.src='https://picsum.photos/id/127/400/280'">
+        <div class="card-text">
+          <div class="item-name">🍜 ${food.name}</div>
+          <div class="item-desc">${food.desc}</div>
+        </div>
+      `;
+      foodList.appendChild(item);
+    });
+
+    modalMask.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    modalMask.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  closeBtn.addEventListener('click', closeModal);
+  modalMask.addEventListener('click', (e) => {
+    if (e.target === modalMask) closeModal();
+  });
+
+// ✅ 右下角按钮：页面切换，跳转到精选路线页面
+const gotoRouteBtn = document.getElementById('gotoRouteBtn');
+if (gotoRouteBtn) {
+    gotoRouteBtn.addEventListener('click', () => {
+        gotoRouteBtn.style.transform = 'scale(0.92)';
+        setTimeout(() => {
+            // 跳转到精选路线页面（文件名带空格需要用 %20 编码）
+            window.location.href = '/route';
+        }, 100);
+        setTimeout(() => {
+            gotoRouteBtn.style.transform = '';
+        }, 200);
+    });
+}
+
+  // 启动渲染
+  renderCityCards();
+
+  // 图片加载容错
+  window.addEventListener('load', () => {
+    const backupImg = 'https://picsum.photos/id/13/400/280';
+    const allImages = document.querySelectorAll('.card-img, .card-media');
+    allImages.forEach(img => {
+      img.addEventListener('error', function() {
+        this.src = backupImg;
+      });
+    });
+  });
+</script>
+</body>
+</html>

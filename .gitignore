@@ -1,0 +1,32 @@
+# 虚拟环境
+.venv/
+.venv313/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 日志文件
+*.log
+.DS_Store
+
+# 环境变量
+.env
+.env.local
+
+# 编辑器配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 构建产物
+dist/
+build/
+
+# Flask缓存
+instance/
+.pytest_cache/
+.coverage
+htmlcov/

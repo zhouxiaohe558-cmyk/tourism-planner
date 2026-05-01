@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>最优游览路线地图</title>
+    <script type="text/javascript">
+        window._AMapSecurityConfig = {
+            securityJsCode: '4540f1e84a8248333b1b25655b5f8e0e',
+        }
+    </script>
+    <script
+        type="text/javascript"
+        src="https://webapi.amap.com/maps?v=2.0&key=09f130b540b9eddb606f3bd9b21ffb73"
+    ></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        body {
+            font-family: "微软雅黑", "PingFang SC", "Helvetica Neue", Roboto, sans-serif;
+        }
+        #map-container {
+            width: 100%;
+            height: 100%;
+        }
+        .back-btn {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            z-index: 100;
+            background: #1e2f3f;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+        .guide-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 100;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            pointer-events: all;
+        }
+        .loading-overlay.hidden {
+            display: none;
+        }
+        .loading-text {
+            color: white;
+            font-size: 18px;
+            background: rgba(0,0,0,0.7);
+            padding: 16px 32px;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map-container"></div>
+    
+    <button class="back-btn" onclick="goBack()">← 返回</button>
+    <button class="guide-btn" id="guideBtn" onclick="goToGuide()" style="display: none;">📝 旅游攻略</button>
+    
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-text">🧭 正在加载路线...</div>
+    </div>
+
+    <script>
+        const SPOTS_DB = [
+            {id:1, name:"天安门广场", city:"北京", province:"北京", lng:116.4038, lat:39.9074, description:"首都中心地标广场"},
+            {id:2, name:"故宫博物院", city:"北京", province:"北京", lng:116.3972, lat:39.9175, description:"世界最大皇家建筑群"},
+            {id:3, name:"八达岭长城", city:"北京", province:"北京", lng:116.0258, lat:40.3646, description:"世界文化遗产长城精华"},
+            {id:4, name:"天津之眼", city:"天津", province:"天津", lng:117.1802, lat:39.1522, description:"海河地标摩天轮"},
+            {id:5, name:"承德避暑山庄", city:"承德", province:"河北", lng:117.2636, lat:40.6697, description:"清代皇家园林"},
+            {id:6, name:"平遥古城", city:"晋中", province:"山西", lng:112.1768, lat:37.1232, description:"保存最完整明清古城"},
+            {id:7, name:"秦始皇兵马俑", city:"西安", province:"陕西", lng:109.2719, lat:34.3846, description:"世界第八大奇迹"},
+            {id:8, name:"华清宫", city:"西安", province:"陕西", lng:109.2122, lat:34.2659, description:"唐代皇家温泉行宫"},
+            {id:9, name:"敦煌莫高窟", city:"敦煌", province:"甘肃", lng:94.8025, lat:40.1476, description:"千年佛教艺术宝库"},
+            {id:10, name:"青海湖", city:"海南藏族", province:"青海", lng:100.1546, lat:36.5712, description:"中国最大内陆咸水湖"},
+            {id:11, name:"沙坡头", city:"中卫", province:"宁夏", lng:104.9541, lat:37.4708, description:"沙漠黄河交汇奇观"},
+            {id:12, name:"天山天池", city:"昌吉", province:"新疆", lng:88.1169, lat:43.8957, description:"高山湖泊仙境"},
+            {id:13, name:"哈尔滨冰雪大世界", city:"哈尔滨", province:"黑龙江", lng:126.5626, lat:45.7765, description:"冰雪主题乐园"},
+            {id:14, name:"沈阳故宫", city:"沈阳", province:"辽宁", lng:123.4567, lat:41.8036, description:"清代开国皇宫"},
+            {id:15, name:"长白山天池", city:"延边", province:"吉林", lng:128.1722, lat:42.0167, description:"火山口高山湖泊"},
+            {id:16, name:"东方明珠塔", city:"上海", province:"上海", lng:121.4992, lat:31.2397, description:"上海地标"},
+            {id:17, name:"外滩", city:"上海", province:"上海", lng:121.4904, lat:31.2368, description:"万国建筑博览群"},
+            {id:18, name:"杭州西湖", city:"杭州", province:"浙江", lng:120.1450, lat:30.2590, description:"世界文化遗产"},
+            {id:19, name:"黄山风景区", city:"黄山", province:"安徽", lng:118.1732, lat:30.1435, description:"天下第一奇山"},
+            {id:20, name:"鼓浪屿", city:"厦门", province:"福建", lng:118.0789, lat:24.4496, description:"海上花园"},
+            {id:21, name:"庐山", city:"九江", province:"江西", lng:115.9043, lat:29.5627, description:"匡庐奇秀甲天下"},
+            {id:22, name:"泰山", city:"泰安", province:"山东", lng:117.1215, lat:36.1533, description:"五岳独尊"},
+            {id:23, name:"龙门石窟", city:"洛阳", province:"河南", lng:112.4692, lat:34.6653, description:"世界文化遗产石刻"},
+            {id:24, name:"黄鹤楼", city:"武汉", province:"湖北", lng:114.3065, lat:30.5462, description:"江南名楼"},
+            {id:25, name:"橘子洲", city:"长沙", province:"湖南", lng:112.9528, lat:28.9287, description:"毛主席青年雕塑"},
+            {id:26, name:"张家界武陵源", city:"张家界", province:"湖南", lng:110.4215, lat:29.3265, description:"阿凡达奇幻峰林"},
+            {id:27, name:"广州塔", city:"广州", province:"广东", lng:113.3271, lat:23.1200, description:"小蛮腰地标"},
+            {id:28, name:"珠海长隆海洋王国", city:"珠海", province:"广东", lng:113.5262, lat:22.1193, description:"海洋主题乐园"},
+            {id:29, name:"桂林漓江", city:"桂林", province:"广西", lng:110.2896, lat:25.2781, description:"喀斯特山水"},
+            {id:30, name:"亚龙湾", city:"三亚", province:"海南", lng:109.5112, lat:18.3132, description:"东方夏威夷"},
+            {id:31, name:"洪崖洞", city:"重庆", province:"重庆", lng:106.5836, lat:29.5592, description:"魔幻夜景吊脚楼"},
+            {id:32, name:"九寨沟", city:"阿坝", province:"四川", lng:103.8828, lat:33.2686, description:"人间仙境"},
+            {id:33, name:"成都大熊猫基地", city:"成都", province:"四川", lng:104.1312, lat:30.7417, description:"熊猫繁育基地"},
+            {id:34, name:"黄果树瀑布", city:"安顺", province:"贵州", lng:105.6761, lat:25.9831, description:"亚洲第一大瀑布"},
+            {id:35, name:"丽江古城", city:"丽江", province:"云南", lng:100.2332, lat:26.8721, description:"纳西风情古城"},
+            {id:36, name:"大理洱海", city:"大理", province:"云南", lng:100.2282, lat:25.6042, description:"苍山洱海风光"},
+            {id:37, name:"维多利亚港", city:"香港", province:"香港", lng:114.1832, lat:22.2935, description:"世界三大夜景"},
+            {id:38, name:"大三巴牌坊", city:"澳门", province:"澳门", lng:113.5489, lat:22.1912, description:"澳门地标"},
+            {id:39, name:"垦丁海滩", city:"屏东", province:"台湾", lng:120.7417, lat:22.0027, description:"热带海滨"},
+            {id:40, name:"呼伦贝尔草原", city:"呼伦贝尔", province:"内蒙古", lng:119.7622, lat:49.2137, description:"世界最美草原"},
+            {id:41, name:"布达拉宫", city:"拉萨", province:"西藏", lng:91.1177, lat:29.6582, description:"雪域宫殿"},
+            {id:42, name:"都江堰", city:"都江堰", province:"四川", lng:103.6153, lat:31.0080, description:"世界文化遗产古代水利工程"},
+            {id:43, name:"青城山", city:"都江堰", province:"四川", lng:103.5849, lat:30.9947, description:"道教名山"},
+            {id:44, name:"峨眉山", city:"乐山", province:"四川", lng:103.4352, lat:29.5871, description:"佛教名山"},
+            {id:45, name:"乐山大佛", city:"乐山", province:"四川", lng:103.7799, lat:29.5451, description:"世界最大石刻坐佛"},
+            {id:46, name:"稻城亚丁", city:"甘孜", province:"四川", lng:100.2201, lat:28.5292, description:"蓝色星球上最后一片净土"}
+        ];
+
+        let map = null;
+        let currentRouteSpots = [];
+
+        function computeRoute(spots) {
+            if (spots.length <= 1) return spots;
+            let unvisited = [...spots];
+            let route = [unvisited.shift()];
+            while (unvisited.length > 0) {
+                let last = route[route.length - 1];
+                let minDist = Infinity;
+                let nearestIdx = 0;
+                for (let i = 0; i < unvisited.length; i++) {
+                    let dx = unvisited[i].lng - last.lng;
+                    let dy = unvisited[i].lat - last.lat;
+                    let d = Math.sqrt(dx * dx + dy * dy);
+                    if (d < minDist) {
+                        minDist = d;
+                        nearestIdx = i;
+                    }
+                }
+                route.push(unvisited.splice(nearestIdx, 1)[0]);
+            }
+            return route;
+        }
+
+        function initMap() {
+            map = new AMap.Map("map-container");
+            AMap.plugin(['AMap.Scale', 'AMap.ToolBar', 'AMap.Driving'], function() {
+                map.addControl(new AMap.Scale());
+                map.addControl(new AMap.ToolBar());
+            });
+        }
+
+        function drawRoute(spots) {
+            if (!spots.length) return;
+            
+            const path = spots.map(s => new AMap.LngLat(s.lng, s.lat));
+            
+            const polyline = new AMap.Polyline({
+                path: path,
+                strokeColor: "#FF8C42",
+                strokeWeight: 5
+            });
+            map.add(polyline);
+
+            spots.forEach((spot, idx) => {
+                const marker = new AMap.Marker({
+                    position: [spot.lng, spot.lat],
+                    title: `${idx + 1}. ${spot.name}`,
+                    label: {
+                        content: `<div style="background:#ffaa33; color:#fff; padding:2px 8px; border-radius:10px; font-weight:bold;">${idx + 1}</div>`,
+                        offset: [0, -30]
+                    }
+                });
+                marker.on('click', function() {
+                    new AMap.InfoWindow({
+                        content: `<div style="padding:8px;"><b>${spot.name}</b><br/>${spot.city} · ${spot.province}<br/>${spot.description || ''}</div>`
+                    }).open(map, [spot.lng, spot.lat]);
+                });
+                map.add(marker);
+            });
+
+            map.setFitView();
+        }
+
+        function drawRealRoute(spots) {
+            if (!spots.length) return;
+
+            document.querySelector('.loading-text').textContent = '正在规划真实路线...';
+
+            const driving = new AMap.Driving({
+                map: map,
+                showTraffic: false,
+                hideMarkers: true
+            });
+
+            const points = spots.map(s => new AMap.LngLat(s.lng, s.lat));
+            
+            const waypoints = points.slice(1, points.length - 1);
+            const origin = points[0];
+            const destination = points[points.length - 1];
+
+            driving.search(origin, destination, { waypoints: waypoints }, function(status, result) {
+                if (status === 'complete') {
+                    console.log('路线规划成功');
+                    
+                    spots.forEach((spot, idx) => {
+                        const marker = new AMap.Marker({
+                            position: [spot.lng, spot.lat],
+                            title: `${idx + 1}. ${spot.name}`,
+                            label: {
+                                content: `<div style="background:#ffaa33; color:#fff; padding:2px 8px; border-radius:10px; font-weight:bold;">${idx + 1}</div>`,
+                                offset: [0, -30]
+                            }
+                        });
+                        marker.on('click', function() {
+                            new AMap.InfoWindow({
+                                content: `<div style="padding:8px;"><b>${spot.name}</b><br/>${spot.city} · ${spot.province}<br/>${spot.description || ''}</div>`
+                            }).open(map, [spot.lng, spot.lat]);
+                        });
+                        map.add(marker);
+                    });
+
+                    document.getElementById('loadingOverlay').classList.add('hidden');
+                    document.getElementById('guideBtn').style.display = 'block';
+                } else {
+                    console.log('路线规划失败，使用直线');
+                    drawRoute(spots);
+                }
+            });
+        }
+
+        function goBack() {
+            window.location.href = '/route';
+        }
+
+        function goToGuide() {
+            if (currentRouteSpots.length > 0) {
+                const spotIds = currentRouteSpots.map(s => s.id).join(',');
+                window.location.href = '/guide?spotIds=' + spotIds;
+            }
+        }
+
+        function loadSpots() {
+            const params = new URLSearchParams(window.location.search);
+            const ids = params.get('spotIds');
+            
+            if (!ids) {
+                document.querySelector('.loading-text').textContent = '没有景点参数';
+                setTimeout(() => document.getElementById('loadingOverlay').classList.add('hidden'), 2000);
+                return;
+            }
+
+            const selectedIds = ids.split(',').map(Number);
+            const spots = SPOTS_DB.filter(s => selectedIds.includes(s.id));
+            
+            if (!spots.length) {
+                document.querySelector('.loading-text').textContent = '未找到对应景点';
+                setTimeout(() => document.getElementById('loadingOverlay').classList.add('hidden'), 2000);
+                return;
+            }
+
+            currentRouteSpots = computeRoute(spots);
+            drawRealRoute(currentRouteSpots);
+            document.getElementById('guideBtn').style.display = 'block';
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+
+        window.onload = function() {
+            initMap();
+            setTimeout(loadSpots, 300);
+        };
+    </script>
+</body>
+</html>

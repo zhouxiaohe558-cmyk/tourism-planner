@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AI智能最优游览路线地图 | 动态路径规划</title>
+    <script type="text/javascript">
+        window._AMapSecurityConfig = {
+            securityJsCode: '4540f1e84a8248333b1b25655b5f8e0e',
+        }
+    </script>
+    <script
+        type="text/javascript"
+        src="https://webapi.amap.com/maps?v=2.0&key=09f130b540b9eddb606f3bd9b21ffb73"
+        onerror="window.__AMAP_LOAD_ERROR__ = '高德 JS API 加载失败：请检查网络/Key/安全密钥/域名白名单';"
+        onload="console.log('高德地图 API 加载成功');"
+    ></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "微软雅黑", "PingFang SC", "Helvetica Neue", Roboto, sans-serif;
+        }
+        body {
+            background: #f0f2f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        /* 精致导航栏 */
+        header {
+            width: 100%;
+            height: 70px;
+            background: linear-gradient(135deg, #1e2f3f 0%, #15232e 100%);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 48px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            z-index: 20;
+            flex-shrink: 0;
+        }
+        .logo {
+            height: 44px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+        nav ul {
+            display: flex;
+            gap: 48px;
+            list-style: none;
+        }
+        nav ul li {
+            list-style: none;
+        }
+        nav ul li a {
+            color: #ffd966;
+            font-size: 17px;
+            font-weight: 600;
+            transition: 0.2s;
+            letter-spacing: 1px;
+            text-decoration: none;
+        }
+        nav ul li a:hover, nav ul li a.active {
+            color: white;
+            border-bottom: 3px solid #ffaa33;
+            padding-bottom: 6px;
+            text-decoration: none;
+        }
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: white;
+            border-radius: 40px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .search-box input {
+            width: 210px;
+            height: 38px;
+            padding: 0 16px;
+            border: none;
+            outline: none;
+            font-size: 14px;
+        }
+        .search-box button {
+            width: 46px;
+            height: 38px;
+            background: #ffaa33;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            transition: 0.2s;
+        }
+        .search-box button:hover {
+            background: #e69500;
+        }
+
+        /* 路线类型切换（右上角） */
+        .route-mode {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 18px;
+        }
+        .route-mode-label {
+            color: rgba(255,255,255,0.88);
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            user-select: none;
+        }
+        .route-mode-select {
+            height: 38px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.22);
+            background: rgba(255,255,255,0.12);
+            color: #fff3d1;
+            padding: 0 12px;
+            outline: none;
+        }
+        .route-mode-select option {
+            color: #1e2f3f;
+        }
+
+        /* 主内容区布局：地图在左，路线信息卡在右 */
+        .map-wrapper {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            margin: 20px 28px 24px 28px;
+            min-height: 600px;
+        }
+        
+        /* 地图容器 */
+        .map-container-wrapper {
+            flex: 3;
+            border-radius: 32px;
+            overflow: hidden;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.35);
+            background: #e9ecef;
+            min-height: 600px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        #map-container {
+            width: 100%;
+            height: 100%;
+            min-height: 600px;
+            touch-action: auto;
+            position: relative;
+            z-index: 1;
+            pointer-events: auto !important;
+        }
+
+        #map-container .amap-maps {
+            pointer-events: auto !important;
+            touch-action: auto !important;
+        }
+        
+        /* 确保高德控件层位于最上层并可点击 */
+        #map-container .amap-controls,
+        #map-container .amap-toolbar,
+        #map-container .amap-zoomcontrol,
+        #map-container .amap-scalecontrol {
+            z-index: 99999 !important;
+            pointer-events: auto !important;
+        }
+
+        /* 路线信息卡 (右侧布局) */
+        .route-sidecard {
+            flex: 1;
+            min-width: 300px;
+            max-width: 400px;
+            background: rgba(22, 32, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border-radius: 28px;
+            padding: 24px 28px;
+            color: white;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.3);
+            border-left: 6px solid #ffaa33;
+            transition: all 0.2s;
+            overflow-y: auto;
+        }
+        
+        .route-sidecard .route-mode {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 12px 0;
+        }
+        
+        .route-sidecard .route-mode-label {
+            color: rgba(255,255,255,0.88);
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            user-select: none;
+        }
+        
+        .route-sidecard .route-mode-select {
+            height: 36px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.22);
+            background: rgba(255,255,255,0.12);
+            color: #fff3d1;
+            padding: 0 12px;
+            outline: none;
+            font-size: 13px;
+        }
+        
+        .route-sidecard .route-mode-select option {
+            color: #1e2f3f;
+        }
+        
+        .route-sidecard h3 {
+            font-size: 20px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #ffdd99;
+        }
+        
+        .route-detail {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        
+        .route-stats {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .route-stats span {
+            background: rgba(255,255,240,0.2);
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 13px;
+        }
+        
+        .route-order {
+            font-weight: 500;
+            font-size: 14px;
+            word-break: break-all;
+            line-height: 1.6;
+            color: #ffecb3;
+        }
+        
+        .btn-reset {
+            background: #ffaa33;
+            border: none;
+            color: #1e2f3f;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 13px;
+            align-self: flex-start;
+            margin-top: 10px;
+        }
+        
+        .btn-reset:hover {
+            background: #ffcc66;
+            transform: scale(1.02);
+        }
+        
+        @media (max-width: 1024px) {
+            .map-wrapper {
+                flex-direction: column;
+            }
+            
+            .route-sidecard {
+                max-width: 100%;
+                min-width: auto;
+                order: 1;
+            }
+            
+            .map-container-wrapper {
+                order: 2;
+            }
+        }
+        
+        @media (max-width: 900px) {
+            header { padding: 0 20px; }
+            nav ul { gap: 24px; }
+            .map-wrapper { margin: 16px; }
+        }
+        .loading-tip {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 12px 28px;
+            border-radius: 48px;
+            z-index: 40;
+            font-size: 15px;
+            backdrop-filter: blur(6px);
+            pointer-events: none;
+        }
+
+        /* 调试面板（仅用于定位交互失效原因） */
+        .debug-panel {
+            position: absolute;
+            top: 18px;
+            left: 18px;
+            z-index: 9999;
+            background: rgba(0, 0, 0, 0.68);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 14px;
+            padding: 10px 12px;
+            font-size: 12px;
+            line-height: 1.35;
+            max-width: 420px;
+            pointer-events: none;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="https://img.icons8.com/fluency/96/ffffff/mountain.png" alt="旅游logo" class="logo">
+        <nav>
+            <ul>
+                <li><a href="/">首页</a></li>
+                <li><a href="/city">热门城市</a></li>
+                <li><a href="/route">路线规划</a></li>
+                <li><a href="/map" class="active">最优游览路线地图</a></li>
+                <li><a href="/guide">旅游攻略</a></li>
+                <li><a href="#">精选留言</a></li>
+            </ul>
+        </nav>
+        <div class="search-box">
+            <input type="text" placeholder="搜索景点或攻略">
+            <button>🔍</button>
+        </div>
+    </header>
+
+    <div class="map-wrapper">
+        <div class="map-container-wrapper">
+            <div id="map-container"></div>
+            <div id="interactionStatus" style="position:absolute;left:12px;bottom:12px;z-index:100000;background:rgba(0,0,0,0.65);color:#fff;padding:8px 10px;border-radius:8px;font-size:12px;line-height:1.4;pointer-events:none;">交互状态初始化中...</div>
+            <div id="debugPanel" class="debug-panel" style="display:none;"></div>
+            <div id="loadingTip" class="loading-tip">🧭 正在加载最优路径规划器 ...</div>
+        </div>
+        <div id="route-sidecard" class="route-sidecard" style="display: none;">
+            <h3>✨ AI 最优游览路线 <span style="font-size: 13px;">(贪心最短路径算法)</span></h3>
+            <div class="route-detail">
+                <div class="route-stats">
+                    <span>📍 景点数: <strong id="spot-count">0</strong></span>
+                    <span>⏱️ 预估时间: <strong id="total-time">0h</strong></span>
+                    <span>📏 直线总距: <strong id="total-dist">0km</strong></span>
+                </div>
+                <div class="route-mode" style="margin: 12px 0;">
+                    <span class="route-mode-label">路线类型</span>
+                    <select class="route-mode-select" id="routeModeSelect" title="切换路线类型">
+                        <option value="driving" selected>驾车</option>
+                        <option value="walking">步行</option>
+                        <option value="transit">公交</option>
+                    </select>
+                </div>
+                <div id="route-order-list" class="route-order">请选择景点后生成最优串联顺序</div>
+                <div style="display: flex; align-items: center; gap: 12px; margin-top: 12px;">
+                    <button class="btn-reset" id="reset-view">🗺️ 重置视野</button>
+                    <button class="btn-reset" id="generate-guide" style="background: #4CAF50;">📝 立刻生成旅游攻略</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+/**
+ * 启用页面内调试面板（用于定位“地图无法拖动/缩放”的原因）。
+ * - 按住 Shift 并点击页面任意位置：切换显示/隐藏
+ * @returns {void}
+ */
+function setupDebugPanel() {
+    const panel = document.getElementById('debugPanel');
+    if (!panel) return;
+
+    const state = {
+        enabled: false,
+        lastEvent: '',
+        lastTarget: ''
+    };
+
+    /**
+     * @param {MouseEvent} e
+     */
+    function update(e) {
+        if (!state.enabled) return;
+        try {
+            const el = document.elementFromPoint(e.clientX, e.clientY);
+            const desc = el
+                ? `${String(el.tagName || '').toLowerCase()}${el.id ? `#${el.id}` : ''}${el.className ? `.${String(el.className).replace(/\s+/g, '.')}` : ''}`
+                : '(null)';
+            state.lastEvent = `${e.type} @ (${e.clientX},${e.clientY})`;
+            state.lastTarget = desc;
+            const mapState = (typeof map !== 'undefined' && map) ? 'ok' : 'null';
+            const modeState = (typeof currentRouteMode !== 'undefined') ? currentRouteMode : 'unknown';
+            panel.textContent =
+                `调试：Shift+点击切换\n` +
+                `事件: ${state.lastEvent}\n` +
+                `命中元素: ${state.lastTarget}\n` +
+                `AMap: ${typeof window.AMap}\n` +
+                `map实例: ${mapState}\n` +
+                `routeMode: ${modeState}`;
+        } catch (error) {
+            panel.textContent = `调试面板更新失败: ${error?.message || error}`;
+        }
+    }
+
+    window.addEventListener('click', (e) => {
+        if (e.shiftKey) {
+            state.enabled = !state.enabled;
+            panel.style.display = state.enabled ? 'block' : 'none';
+            if (state.enabled) {
+                panel.textContent = '调试面板已开启，移动鼠标/滚轮试试…';
+            }
+        }
+    }, true);
+
+    // 捕获阶段监听，判断事件是否被上层元素吃掉
+    ['mousemove', 'mousedown', 'mouseup', 'wheel'].forEach(type => {
+        window.addEventListener(type, update, { capture: true, passive: true });
+    });
+
+    // 错误捕获：如果高德内部报错，会直接显示出来
+    window.addEventListener('error', (ev) => {
+        if (!state.enabled) return;
+        try {
+            const msg = ev && ev.message ? ev.message : '未知脚本错误';
+            // 跨域脚本的泛化错误（常见为 "Script error."）信息不足，避免覆盖诊断面板
+            if (msg === 'Script error.' || msg === 'Script error') return;
+            panel.style.display = 'block';
+            state.enabled = true;
+            panel.textContent = `脚本错误: ${msg}`;
+        } catch (err) {
+            panel.style.display = 'block';
+            state.enabled = true;
+            panel.textContent = '脚本错误: 无法解析错误信息';
+        }
+    });
+    window.addEventListener('unhandledrejection', (ev) => {
+        if (!state.enabled) return;
+        try {
+            panel.style.display = 'block';
+            state.enabled = true;
+            const reason = ev && ev.reason ? ev.reason : ev;
+            panel.textContent = `Promise错误: ${String(reason)}`;
+        } catch (err) {
+            panel.style.display = 'block';
+            state.enabled = true;
+            panel.textContent = 'Promise错误: 无法解析错误信息';
+        }
+    });
+}
+
+setupDebugPanel();
+
+function enforceMapInteractions() {
+    if (!map) return;
+    try {
+        map.setStatus({
+            dragEnable: true,
+            zoomEnable: true,
+            doubleClickZoom: true,
+            keyboardEnable: true,
+            scrollWheel: true,
+            touchZoom: true
+        });
+    } catch (error) {
+        console.warn('setStatus failed', error);
+    }
+    const container = document.getElementById('map-container');
+    if (container) {
+        container.style.pointerEvents = 'auto';
+        container.addEventListener('mouseenter', () => {
+            try {
+                map.setStatus({ dragEnable: true, zoomEnable: true, scrollWheel: true, touchZoom: true });
+            } catch (error) {
+                // ignore
+            }
+        });
+    }
+}
+
+function installManualMapInteractionFallback() {
+    if (!map) return;
+    if (window.__MANUAL_MAP_INTERACTION_INSTALLED__) return;
+    window.__MANUAL_MAP_INTERACTION_INSTALLED__ = true;
+
+    let dragging = false;
+    let activePointerId = null;
+    let lastX = 0;
+    let lastY = 0;
+    const statusEl = document.getElementById('interactionStatus');
+    let wheelCount = 0;
+    let dragCount = 0;
+
+    function updateStatus(text) {
+        if (!statusEl || !map) return;
+        let zoom = '-';
+        try {
+            const z = map.getZoom ? Number(map.getZoom()) : NaN;
+            zoom = Number.isFinite(z) ? z.toFixed(1) : '-';
+        } catch (error) {
+            zoom = '-';
+        }
+        statusEl.textContent = `手势兜底: 已启用 | zoom=${zoom} | wheel=${wheelCount} | drag=${dragCount} | ${text}`;
+    }
+
+    function isInMapArea(clientX, clientY) {
+        const container = document.getElementById('map-container');
+        if (!container) return false;
+        const rect = container.getBoundingClientRect();
+        return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+    }
+
+    function beginDrag(clientX, clientY, pointerId = null) {
+        if (!isInMapArea(clientX, clientY) || !map) return;
+        dragging = true;
+        activePointerId = pointerId;
+        dragCount += 1;
+        lastX = clientX;
+        lastY = clientY;
+        updateStatus('drag开始');
+    }
+
+    function moveDrag(clientX, clientY, pointerId = null) {
+        if (!dragging || !map) return;
+        if (activePointerId !== null && pointerId !== null && pointerId !== activePointerId) return;
+        try {
+            const dx = clientX - lastX;
+            const dy = clientY - lastY;
+            lastX = clientX;
+            lastY = clientY;
+            map.panBy(-dx, -dy);
+            updateStatus('drag移动中');
+        } catch (error) {
+            // ignore
+        }
+    }
+
+    function endDrag() {
+        dragging = false;
+        activePointerId = null;
+        updateStatus('drag结束');
+    }
+
+    window.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        beginDrag(e.clientX, e.clientY, e.pointerId);
+    }, true);
+
+    window.addEventListener('pointermove', (e) => {
+        moveDrag(e.clientX, e.clientY, e.pointerId);
+    }, true);
+
+    window.addEventListener('pointerup', endDrag, true);
+    window.addEventListener('pointercancel', endDrag, true);
+
+    // 额外提供 mouse 事件兜底（部分 WebView 对 pointer 支持不稳定）
+    window.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        beginDrag(e.clientX, e.clientY, null);
+    }, true);
+    window.addEventListener('mousemove', (e) => {
+        moveDrag(e.clientX, e.clientY, null);
+    }, true);
+    window.addEventListener('mouseup', endDrag, true);
+
+    window.addEventListener('wheel', (e) => {
+        if (!map) return;
+        if (!isInMapArea(e.clientX, e.clientY)) return;
+        e.preventDefault();
+        wheelCount += 1;
+        try {
+            if (e.deltaY > 0) {
+                map.zoomOut();
+            } else {
+                map.zoomIn();
+            }
+            updateStatus('wheel触发zoomIn/zoomOut');
+        } catch (error) {
+            // ignore
+        }
+    }, { capture: true, passive: false });
+
+    updateStatus('等待鼠标事件');
+}
+
+function rebindInteractionsForGeneratedRoute() {
+    // 关键：专门用于“携带 spotIds 生成路线后”的地图，强制重绑一次交互逻辑
+    window.__MANUAL_MAP_INTERACTION_INSTALLED__ = false;
+    enforceMapInteractions();
+    installManualMapInteractionFallback();
+}
+
+// ======================= 完整高精度景点数据库 (含经纬度 + 详细信息) =======================
+const FULL_SPOTS_DB = [
+    {id:1, name:"天安门广场", city:"北京", province:"北京", address:"北京市东城区长安街", lng:116.4038, lat:39.9074, description:"首都中心地标广场", ticket:"免费预约", openTime:"全天"},
+    {id:2, name:"故宫博物院", city:"北京", province:"北京", address:"北京市东城区景山前街", lng:116.3972, lat:39.9175, description:"世界最大皇家建筑群", ticket:"60元"},
+    {id:3, name:"八达岭长城", city:"北京", province:"北京", address:"北京市延庆区", lng:116.0258, lat:40.3646, description:"世界文化遗产长城精华", ticket:"40元"},
+    {id:4, name:"天津之眼", city:"天津", province:"天津", address:"天津市红桥区永乐桥", lng:117.1802, lat:39.1522, description:"海河地标摩天轮", ticket:"70元"},
+    {id:5, name:"承德避暑山庄", city:"承德", province:"河北", address:"河北省承德市", lng:117.2636, lat:40.6697, description:"清代皇家园林", ticket:"130元"},
+    {id:6, name:"平遥古城", city:"晋中", province:"山西", address:"山西省晋中市平遥县", lng:112.1768, lat:37.1232, description:"保存最完整明清古城", ticket:"125元"},
+    {id:7, name:"秦始皇兵马俑", city:"西安", province:"陕西", address:"西安市临潼区", lng:109.2719, lat:34.3846, description:"世界第八大奇迹", ticket:"120元"},
+    {id:8, name:"华清宫", city:"西安", province:"陕西", address:"西安市临潼区", lng:109.2122, lat:34.2659, description:"唐代皇家温泉行宫", ticket:"120元"},
+    {id:9, name:"敦煌莫高窟", city:"敦煌", province:"甘肃", address:"甘肃敦煌市", lng:94.8025, lat:40.1476, description:"千年佛教艺术宝库", ticket:"238元"},
+    {id:10, name:"青海湖", city:"海南藏族", province:"青海", address:"青海海南州", lng:100.1546, lat:36.5712, description:"中国最大内陆咸水湖", ticket:"90元"},
+    {id:11, name:"沙坡头", city:"中卫", province:"宁夏", address:"宁夏中卫市", lng:104.9541, lat:37.4708, description:"沙漠黄河交汇奇观", ticket:"110元"},
+    {id:12, name:"天山天池", city:"昌吉", province:"新疆", address:"新疆昌吉阜康市", lng:88.1169, lat:43.8957, description:"高山湖泊仙境", ticket:"155元"},
+    {id:13, name:"哈尔滨冰雪大世界", city:"哈尔滨", province:"黑龙江", address:"黑龙江哈尔滨市", lng:126.5626, lat:45.7765, description:"冰雪主题乐园", ticket:"298元"},
+    {id:14, name:"沈阳故宫", city:"沈阳", province:"辽宁", address:"辽宁沈阳市", lng:123.4567, lat:41.8036, description:"清代开国皇宫", ticket:"50元"},
+    {id:15, name:"长白山天池", city:"延边", province:"吉林", address:"吉林延边州", lng:128.1722, lat:42.0167, description:"火山口高山湖泊", ticket:"105元"},
+    {id:16, name:"东方明珠塔", city:"上海", province:"上海", address:"上海市浦东新区", lng:121.4992, lat:31.2397, description:"上海地标", ticket:"199元"},
+    {id:17, name:"外滩", city:"上海", province:"上海", address:"上海黄浦区中山东一路", lng:121.4904, lat:31.2368, description:"万国建筑博览群", ticket:"免费"},
+    {id:18, name:"杭州西湖", city:"杭州", province:"浙江", address:"杭州市西湖区", lng:120.1450, lat:30.2590, description:"世界文化遗产", ticket:"免费"},
+    {id:19, name:"黄山风景区", city:"黄山", province:"安徽", address:"安徽黄山市", lng:118.1732, lat:30.1435, description:"天下第一奇山", ticket:"190元"},
+    {id:20, name:"鼓浪屿", city:"厦门", province:"福建", address:"福建厦门市", lng:118.0789, lat:24.4496, description:"海上花园", ticket:"35元"},
+    {id:21, name:"庐山", city:"九江", province:"江西", address:"江西九江市庐山", lng:115.9043, lat:29.5627, description:"匡庐奇秀甲天下", ticket:"160元"},
+    {id:22, name:"泰山", city:"泰安", province:"山东", address:"山东泰安市", lng:117.1215, lat:36.1533, description:"五岳独尊", ticket:"115元"},
+    {id:23, name:"龙门石窟", city:"洛阳", province:"河南", address:"河南洛阳市", lng:112.4692, lat:34.6653, description:"世界文化遗产石刻", ticket:"90元"},
+    {id:24, name:"黄鹤楼", city:"武汉", province:"湖北", address:"湖北武汉市武昌区", lng:114.3065, lat:30.5462, description:"江南名楼", ticket:"70元"},
+    {id:25, name:"橘子洲", city:"长沙", province:"湖南", address:"湖南长沙市", lng:112.9528, lat:28.9287, description:"毛主席青年雕塑", ticket:"免费"},
+    {id:26, name:"张家界武陵源", city:"张家界", province:"湖南", address:"湖南张家界市", lng:110.4215, lat:29.3265, description:"阿凡达奇幻峰林", ticket:"228元"},
+    {id:27, name:"广州塔", city:"广州", province:"广东", address:"广州市海珠区", lng:113.3271, lat:23.1200, description:"小蛮腰地标", ticket:"150元"},
+    {id:28, name:"珠海长隆海洋王国", city:"珠海", province:"广东", address:"广东珠海横琴", lng:113.5262, lat:22.1193, description:"海洋主题乐园", ticket:"380元"},
+    {id:29, name:"桂林漓江", city:"桂林", province:"广西", address:"广西桂林漓江景区", lng:110.2896, lat:25.2781, description:"喀斯特山水", ticket:"190元"},
+    {id:30, name:"亚龙湾", city:"三亚", province:"海南", address:"海南三亚亚龙湾", lng:109.5112, lat:18.3132, description:"东方夏威夷", ticket:"免费"},
+    {id:31, name:"洪崖洞", city:"重庆", province:"重庆", address:"重庆渝中区嘉滨路", lng:106.5836, lat:29.5592, description:"魔幻夜景吊脚楼", ticket:"免费"},
+    {id:32, name:"九寨沟", city:"阿坝", province:"四川", address:"四川阿坝九寨沟县", lng:103.8828, lat:33.2686, description:"人间仙境", ticket:"169元"},
+    {id:33, name:"成都大熊猫基地", city:"成都", province:"四川", address:"四川成都成华区", lng:104.1312, lat:30.7417, description:"熊猫繁育基地", ticket:"55元"},
+    {id:34, name:"黄果树瀑布", city:"安顺", province:"贵州", address:"贵州安顺市", lng:105.6761, lat:25.9831, description:"亚洲第一大瀑布", ticket:"160元"},
+    {id:35, name:"丽江古城", city:"丽江", province:"云南", address:"云南丽江市", lng:100.2332, lat:26.8721, description:"纳西风情古城", ticket:"免费"},
+    {id:36, name:"大理洱海", city:"大理", province:"云南", address:"云南大理市", lng:100.2282, lat:25.6042, description:"苍山洱海风光", ticket:"免费"},
+    {id:37, name:"维多利亚港", city:"香港", province:"香港", address:"香港维多利亚港", lng:114.1832, lat:22.2935, description:"世界三大夜景", ticket:"免费"},
+    {id:38, name:"大三巴牌坊", city:"澳门", province:"澳门", address:"澳门大三巴", lng:113.5489, lat:22.1912, description:"澳门地标", ticket:"免费"},
+    {id:39, name:"垦丁海滩", city:"屏东", province:"台湾", address:"台湾屏东县垦丁", lng:120.7417, lat:22.0027, description:"热带海滨", ticket:"免费"},
+    {id:40, name:"呼伦贝尔草原", city:"呼伦贝尔", province:"内蒙古", address:"内蒙古呼伦贝尔", lng:119.7622, lat:49.2137, description:"世界最美草原", ticket:"免费"},
+    {id:41, name:"布达拉宫", city:"拉萨", province:"西藏", address:"西藏拉萨市", lng:91.1177, lat:29.6582, description:"雪域宫殿", ticket:"200元预约"},
+    {id:42, name:"都江堰", city:"都江堰", province:"四川", address:"四川省成都市都江堰市", lng:103.6153, lat:31.0080, description:"世界文化遗产，古代水利工程奇迹", ticket:"80元"},
+    {id:43, name:"青城山", city:"都江堰", province:"四川", address:"四川省成都市都江堰市青城山镇", lng:103.5849, lat:30.9947, description:"道教名山，青城天下幽", ticket:"90元"},
+    {id:44, name:"峨眉山", city:"乐山", province:"四川", address:"四川省乐山市峨眉山市", lng:103.4352, lat:29.5871, description:"佛教名山，普贤菩萨道场", ticket:"160元"},
+    {id:45, name:"乐山大佛", city:"乐山", province:"四川", address:"四川省乐山市市中区", lng:103.7799, lat:29.5451, description:"世界最大石刻坐佛", ticket:"80元"},
+    {id:46, name:"稻城亚丁", city:"甘孜", province:"四川", address:"四川省甘孜藏族自治州稻城县", lng:100.2201, lat:28.5292, description:"蓝色星球上的最后一片净土", ticket:"266元"}
+];
+
+// 地图核心变量
+let map = null;
+let currentMarkers = [];
+let currentPolyline = null;
+let currentDrivingPolylines = [];
+let currentTransit = null;
+let currentRouteSpots = [];
+let currentRouteMode = 'driving';
+let hasHardResetAfterRouteLoad = false;
+
+/**
+ * 设置加载提示文案（会自动显示提示层）。
+ * @param {string} msg
+ * @returns {void}
+ */
+function setLoadingTip(msg) {
+    const loadingDiv = document.getElementById('loadingTip');
+    if (!loadingDiv) return;
+    loadingDiv.style.display = 'flex';
+    loadingDiv.textContent = msg;
+}
+
+/**
+ * 隐藏加载提示层。
+ * @returns {void}
+ */
+function hideLoadingTip() {
+    const loadingDiv = document.getElementById('loadingTip');
+    if (!loadingDiv) return;
+    loadingDiv.style.display = 'none';
+}
+
+// 初始化高德地图
+function initMap() {
+    return new Promise((resolve) => {
+        console.log('开始初始化最新版高德地图...');
+        console.log('AMap 对象:', typeof AMap);
+        console.log('地图容器:', document.getElementById('map-container'));
+        
+        // 初始化最新版高德地图
+        map = new AMap.Map("map-container", {
+            zoom: 5,
+            center: [108.0, 34.0],
+            resizeEnable: true,
+            showBuildingBlock: true,
+            showLabel: true,
+            pitch: 0,
+            viewMode: '2D',
+            // 显式开启交互（避免部分环境默认状态异常）
+            dragEnable: true,
+            zoomEnable: true,
+            scrollWheel: true,
+            doubleClickZoom: true,
+            keyboardEnable: true,
+            touchZoom: true
+        });
+        map.setStatus({
+            dragEnable: true,
+            zoomEnable: true,
+            doubleClickZoom: true,
+            keyboardEnable: true,
+            scrollWheel: true,
+            touchZoom: true
+        });
+        enforceMapInteractions();
+        installManualMapInteractionFallback();
+        
+        console.log('地图实例创建成功:', map);
+
+        /**
+         * 加载地图控件插件并挂载到地图上。
+         * @returns {void}
+         */
+        function setupControls() {
+            try {
+                map.addControl(new AMap.Scale({ position: 'LB' }));
+                map.addControl(new AMap.ToolBar({ position: 'RT' }));
+            } catch (e) {
+                console.warn('地图控件加载失败', e);
+            }
+        }
+
+        // 进一步确保交互能力生效（某些环境首次渲染后状态才可修改）
+        map.on('complete', () => {
+            try {
+                // 手动触发 resize 事件，确保地图正确适应容器大小
+                map.resize();
+                map.setStatus({
+                    dragEnable: true,
+                    zoomEnable: true,
+                    doubleClickZoom: true,
+                    keyboardEnable: true,
+                    scrollWheel: true,
+                    touchZoom: true
+                });
+                enforceMapInteractions();
+                installManualMapInteractionFallback();
+                console.log('地图加载完成，交互功能已启用');
+            } catch (e) {
+                console.warn('地图完成事件处理失败:', e);
+            }
+        });
+
+        // 加载所有需要的插件
+        if (typeof AMap?.plugin === 'function') {
+            AMap.plugin(['AMap.Scale', 'AMap.ToolBar', 'AMap.Driving', 'AMap.Walking', 'AMap.Transfer'], () => {
+                setupControls();
+                console.log('所有插件加载完成');
+                resolve(map);
+            });
+        } else {
+            setupControls();
+            resolve(map);
+        }
+    });
+}
+
+// 计算两点之间的欧氏距离（用于贪心排序）
+function calcDistance(p1, p2) {
+    const dx = p1.lng - p2.lng;
+    const dy = p1.lat - p2.lat;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+// 🔥 最优路径规划核心: 贪心最近邻算法 (生成最优游览顺序)
+function computeOptimalRoute(spots) {
+    if (!spots.length) return [];
+    if (spots.length === 1) return spots;
+    let unvisited = [...spots];
+    // 选择第一个点为起始点 (可优化为选择地理中心，但贪心从第一个开始)
+    let route = [unvisited.shift()];
+    while (unvisited.length > 0) {
+        let last = route[route.length - 1];
+        let nearestIdx = 0;
+        let minDist = calcDistance(last, unvisited[0]);
+        for (let i = 1; i < unvisited.length; i++) {
+            let d = calcDistance(last, unvisited[i]);
+            if (d < minDist) {
+                minDist = d;
+                nearestIdx = i;
+            }
+        }
+        route.push(unvisited[nearestIdx]);
+        unvisited.splice(nearestIdx, 1);
+    }
+    return route;
+}
+
+// 计算路线总里程 (直线距离累加，体现参考)
+function calcTotalDistance(route) {
+    let total = 0;
+    for (let i = 0; i < route.length - 1; i++) {
+        total += calcDistance(route[i], route[i+1]);
+    }
+    // 转换为近似公里 (经纬度1度约111km，粗略展示)
+    const approxKm = total * 111;
+    return Math.round(approxKm);
+}
+
+// 预估时间 (基于景点数量 + 距离因素)
+function estimateTime(route, totalDistanceKm) {
+    if (route.length === 0) return 0;
+    let baseHours = route.length * 1.2;  // 每景点1.2小时基础游览
+    let travelHours = totalDistanceKm / 55; // 假设平均速度55km/h
+    return Math.ceil(baseHours + travelHours);
+}
+
+// 清除地图上所有标记和路线
+function clearMapOverlays() {
+    if (currentPolyline) {
+        map.remove(currentPolyline);
+        currentPolyline = null;
+    }
+    if (currentDrivingPolylines.length) {
+        map.remove(currentDrivingPolylines);
+        currentDrivingPolylines = [];
+    }
+    if (currentTransit) {
+        try {
+            currentTransit.clear();
+        } catch (e) {
+            // ignore
+        }
+        currentTransit = null;
+    }
+    if (currentMarkers.length) {
+        map.remove(currentMarkers);
+        currentMarkers = [];
+    }
+}
+
+/**
+ * 确保高德 Driving 插件已加载。
+ * @returns {Promise<void>}
+ */
+function ensureDrivingPlugin() {
+    return new Promise((resolve, reject) => {
+        if (typeof AMap === 'undefined') {
+            reject(new Error('AMap 未加载'));
+            return;
+        }
+        if (AMap.Driving) {
+            resolve();
+            return;
+        }
+        AMap.plugin(['AMap.Driving'], () => {
+            if (AMap.Driving) resolve();
+            else reject(new Error('AMap.Driving 插件加载失败'));
+        });
+    });
+}
+
+/**
+ * 确保高德 Walking 插件已加载。
+ * @returns {Promise<void>}
+ */
+function ensureWalkingPlugin() {
+    return new Promise((resolve, reject) => {
+        if (typeof AMap === 'undefined') {
+            reject(new Error('AMap 未加载'));
+            return;
+        }
+        if (AMap.Walking) {
+            resolve();
+            return;
+        }
+        AMap.plugin(['AMap.Walking'], () => {
+            if (AMap.Walking) resolve();
+            else reject(new Error('AMap.Walking 插件加载失败'));
+        });
+    });
+}
+
+/**
+ * 确保高德 Transfer（公交）插件已加载。
+ * @returns {Promise<void>}
+ */
+function ensureTransferPlugin() {
+    return new Promise((resolve, reject) => {
+        if (typeof AMap === 'undefined') {
+            reject(new Error('AMap 未加载'));
+            return;
+        }
+        if (AMap.Transfer) {
+            resolve();
+            return;
+        }
+        AMap.plugin(['AMap.Transfer'], () => {
+            if (AMap.Transfer) resolve();
+            else reject(new Error('AMap.Transfer 插件加载失败'));
+        });
+    });
+}
+
+/**
+ * 将景点数组转换为高德坐标点数组。
+ * @param {Array<{lng:number,lat:number}>} spots
+ * @returns {Array<[number, number]>}
+ */
+function toLngLatPairs(spots) {
+    return (spots || [])
+        .filter(s => typeof s?.lng === 'number' && typeof s?.lat === 'number')
+        .map(s => [s.lng, s.lat]);
+}
+
+/**
+ * 调用高德 Driving 规划路线并返回 polyline 路径点。
+ * - 注意：高德 Driving 对途经点数量有限制，超出会自动分段规划。
+ * @param {Array<{lng:number,lat:number}>} orderedSpots 已排序景点（起点→终点）
+ * @returns {Promise<Array<Array<[number, number]>>>} 多段路径点集合
+ */
+async function planDrivingPaths(orderedSpots) {
+    await ensureDrivingPlugin();
+
+    const points = toLngLatPairs(orderedSpots);
+    if (points.length < 2) return [];
+
+    /** @type {AMap.Driving} */
+    const driving = new AMap.Driving({
+        // 不让 Driving 自动画线/打点，我们自己画，方便统一样式与编号 marker
+        map: null,
+        hideMarkers: true
+    });
+
+    // 高德常见限制：途经点数量不宜过多，这里用 16 作为保守上限（不含起终点）
+    const MAX_WAYPOINTS = 16;
+    const segments = [];
+    let cursor = 0;
+
+    while (cursor < points.length - 1) {
+        const origin = points[cursor];
+        // 每段最多包含：origin + (MAX_WAYPOINTS) + destination
+        const destinationIdx = Math.min(cursor + MAX_WAYPOINTS + 1, points.length - 1);
+        const destination = points[destinationIdx];
+        const waypoints = points.slice(cursor + 1, destinationIdx);
+
+        // eslint-disable-next-line no-await-in-loop
+        const segmentPaths = await new Promise((resolve, reject) => {
+            driving.search(
+                origin,
+                destination,
+                { waypoints },
+                (status, result) => {
+                    if (status !== 'complete' || !result?.routes?.length) {
+                        reject(new Error(`Driving 规划失败：${status}`));
+                        return;
+                    }
+                    const route = result.routes[0];
+                    const steps = route?.steps || [];
+                    const path = [];
+                    steps.forEach(step => {
+                        const stepPath = step?.path || [];
+                        stepPath.forEach(p => {
+                            // p 是 AMap.LngLat
+                            path.push([p.lng, p.lat]);
+                        });
+                    });
+                    resolve(path.length ? [path] : []);
+                }
+            );
+        });
+
+        segments.push(...segmentPaths);
+        cursor = destinationIdx;
+    }
+
+    return segments;
+}
+
+/**
+ * 调用高德 Walking 规划路线并返回 polyline 路径点（分段）。
+ * @param {Array<{lng:number,lat:number}>} orderedSpots
+ * @returns {Promise<Array<Array<[number, number]>>>}
+ */
+async function planWalkingPaths(orderedSpots) {
+    await ensureWalkingPlugin();
+
+    const points = toLngLatPairs(orderedSpots);
+    if (points.length < 2) return [];
+
+    /** @type {AMap.Walking} */
+    const walking = new AMap.Walking({
+        map: null,
+        hideMarkers: true
+    });
+
+    const segments = [];
+    for (let i = 0; i < points.length - 1; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        const segPaths = await new Promise((resolve, reject) => {
+            walking.search(points[i], points[i + 1], (status, result) => {
+                if (status !== 'complete' || !result?.routes?.length) {
+                    reject(new Error(`Walking 规划失败：${status}`));
+                    return;
+                }
+                const route = result.routes[0];
+                const steps = route?.steps || [];
+                const path = [];
+                steps.forEach(step => {
+                    const stepPath = step?.path || [];
+                    stepPath.forEach(p => path.push([p.lng, p.lat]));
+                });
+                resolve(path.length ? [path] : []);
+            });
+        });
+        segments.push(...segPaths);
+    }
+    return segments;
+}
+
+/**
+ * 公交模式：使用 Transfer 直接在地图上绘制（高德内部渲染），并返回是否成功。
+ * @param {Array<{lng:number,lat:number}>} orderedSpots
+ * @returns {Promise<boolean>}
+ */
+async function planTransitOnMap(orderedSpots) {
+    await ensureTransferPlugin();
+
+    const points = toLngLatPairs(orderedSpots);
+    if (points.length < 2) return false;
+
+    const origin = points[0];
+    const destination = points[points.length - 1];
+    const waypoints = points.slice(1, points.length - 1);
+
+    currentTransit = new AMap.Transfer({
+        map,
+        // 不依赖城市名，让高德自动识别；若你只做单城，可在这里传 city
+        policy: AMap.TransferPolicy.LEAST_TIME
+    });
+
+    return await new Promise((resolve) => {
+        currentTransit.search(
+            origin,
+            destination,
+            { waypoints },
+            (status, result) => {
+                resolve(status === 'complete' && !!result);
+            }
+        );
+    });
+}
+
+/**
+ * 绘制最优路线 + 标记 + 信息窗体（使用高德 Driving 规划的真实道路路线；失败则回退直线连线）。
+ * @param {Array<{lng:number,lat:number,name:string,city?:string,province?:string,address?:string,description?:string,ticket?:string}>} optimalSpots
+ * @returns {Promise<void>}
+ */
+async function drawOptimalRouteOnMap(optimalSpots) {
+    clearMapOverlays();
+    if (!optimalSpots.length) return;
+
+    // 规划并绘制路线（按模式）
+    try {
+        if (currentRouteMode === 'transit') {
+            const ok = await planTransitOnMap(optimalSpots);
+            if (!ok) throw new Error('公交路线规划失败（可能跨城/无公交方案/Key 限制）');
+        } else {
+            const segments = currentRouteMode === 'walking'
+                ? await planWalkingPaths(optimalSpots)
+                : await planDrivingPaths(optimalSpots);
+
+            if (segments.length) {
+                segments.forEach(segPath => {
+                    const polyline = new AMap.Polyline({
+                        path: segPath,
+                        strokeColor: "#FF8C42",
+                        strokeWeight: 7,
+                        strokeOpacity: 0.95,
+                        lineJoin: 'round',
+                        lineCap: 'round',
+                        borderWeight: 2,
+                        borderColor: "#FFF5E0",
+                        zIndex: 15
+                    });
+                    currentDrivingPolylines.push(polyline);
+                });
+                map.add(currentDrivingPolylines);
+            } else {
+                throw new Error('路线规划返回空路径');
+            }
+        }
+    } catch (e) {
+        // 规划失败时回退为直线连线，保证一定有可视化结果
+        const fallbackPath = optimalSpots.map(spot => [spot.lng, spot.lat]);
+        currentPolyline = new AMap.Polyline({
+            path: fallbackPath,
+            strokeColor: "#FF8C42",
+            strokeWeight: 6,
+            strokeOpacity: 0.95,
+            lineJoin: 'round',
+            lineCap: 'round',
+            borderWeight: 2,
+            borderColor: "#FFF5E0",
+            zIndex: 15
+        });
+        map.add(currentPolyline);
+        console.warn(e);
+        setLoadingTip(`⚠️ 路线规划失败，已使用直线连线替代：${e?.message || e}`);
+        setTimeout(() => hideLoadingTip(), 2600);
+    }
+
+    // 添加标记，带序号和悬浮窗
+    optimalSpots.forEach((spot, idx) => {
+        const markerContent = `<div style="background:#ffaa33; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; color:#2d2f36; border: 2px solid white; box-shadow:0 2px 12px rgba(0,0,0,0.3);">${idx+1}</div>`;
+        const marker = new AMap.Marker({
+            position: [spot.lng, spot.lat],
+            title: spot.name,
+            content: markerContent,
+            offset: new AMap.Pixel(-16, -16),
+            zIndex: 20
+        });
+        // 信息窗口内容
+        const infoHtml = `
+            <div style="padding: 12px 16px; max-width: 260px;">
+                <h4 style="color:#ff8c42; margin-bottom: 8px;">📍 ${spot.name}</h4>
+                <p style="margin:4px 0; font-size:13px;">🏙️ ${spot.city} · ${spot.province}</p>
+                <p style="margin:4px 0; font-size:12px; color:#555;">${spot.address || spot.description || ''}</p>
+                <p style="margin:6px 0 0 0; font-size:12px;">🎫 ${spot.ticket || '详询景区'}</p>
+                <small style="color:#888;">🔢 路线序号 ${idx+1}</small>
+            </div>
+        `;
+        marker.on('click', () => {
+            const infoWin = new AMap.InfoWindow({
+                content: infoHtml,
+                offset: new AMap.Pixel(0, -28)
+            });
+            infoWin.open(map, [spot.lng, spot.lat]);
+        });
+        map.add(marker);
+        currentMarkers.push(marker);
+    });
+
+    // 自动调整视野到最优路径范围
+    if (optimalSpots.length > 0) {
+        setTimeout(() => {
+            const fitTargets = [];
+            if (currentDrivingPolylines.length) fitTargets.push(...currentDrivingPolylines);
+            if (currentPolyline) fitTargets.push(currentPolyline);
+            if (fitTargets.length) {
+                map.setFitView(fitTargets, false, { padding: 60 });
+            } else if (currentMarkers.length) {
+                map.setFitView(currentMarkers, false, { padding: 60 });
+            }
+            map.render();
+            // 某些情况下 setFitView/render 后会出现交互状态丢失，这里强制恢复一次
+            enforceMapInteractions();
+            installManualMapInteractionFallback();
+        }, 200);
+    }
+
+    // 路线绘制完成后再兜底恢复交互，确保“从路线规划页跳转携参”场景可拖拽缩放
+    setTimeout(() => {
+        enforceMapInteractions();
+        installManualMapInteractionFallback();
+    }, 50);
+}
+
+/**
+ * 在“路线规划页携参跳转”场景下，强制重建地图实例并重绘路线。
+ * 用于兜底修复部分环境下绘制后地图交互失效的问题。
+ * @param {Array<Object>} routeSpots
+ * @returns {Promise<void>}
+ */
+async function hardResetMapAndRedraw(routeSpots) {
+    if (hasHardResetAfterRouteLoad || !routeSpots?.length) return;
+    hasHardResetAfterRouteLoad = true;
+    setLoadingTip('🛠️ 正在重建地图交互内核 ...');
+
+    try {
+        if (map) {
+            try {
+                map.destroy();
+            } catch (error) {
+                // ignore
+            }
+            map = null;
+        }
+        const container = document.getElementById('map-container');
+        if (container) {
+            container.innerHTML = '';
+        }
+        await initMap();
+        await drawOptimalRouteOnMap(routeSpots);
+        updateRouteCard(routeSpots);
+    } finally {
+        hideLoadingTip();
+    }
+}
+
+// 更新侧边卡片信息
+function updateRouteCard(routeSpots) {
+    const card = document.getElementById('route-sidecard');
+    if (!routeSpots.length) {
+        card.style.display = 'none';
+        if (map) {
+            setTimeout(() => {
+                try {
+                    map.resize();
+                    enforceMapInteractions();
+                } catch (e) {
+                    // ignore
+                }
+            }, 0);
+        }
+        return;
+    }
+    card.style.display = 'block';
+    const count = routeSpots.length;
+    const totalDistKm = calcTotalDistance(routeSpots);
+    const totalHours = estimateTime(routeSpots, totalDistKm);
+    document.getElementById('spot-count').innerText = count;
+    document.getElementById('total-dist').innerText = `${totalDistKm} km`;
+    document.getElementById('total-time').innerText = `${totalHours} 小时`;
+    const namesList = routeSpots.map((s, i) => `${i+1}.${s.name}`).join('  →  ');
+    document.getElementById('route-order-list').innerHTML = `✨ 最优串联: ${namesList}`;
+
+    // 关键修复：侧边卡片显示会改变地图容器尺寸，必须在该时机刷新地图尺寸与交互状态
+    if (map) {
+        setTimeout(() => {
+            try {
+                map.resize();
+                enforceMapInteractions();
+                installManualMapInteractionFallback();
+            } catch (e) {
+                // ignore
+            }
+        }, 0);
+        setTimeout(() => {
+            try {
+                map.resize();
+                enforceMapInteractions();
+            } catch (e) {
+                // ignore
+            }
+        }, 280);
+    }
+}
+
+// 从URL获取景点ID并加载最优路径 (主流程)
+async function loadRouteFromURL() {
+    setLoadingTip('🧭 正在加载最优路径规划器 ...');
+
+    if (window.__AMAP_LOAD_ERROR__) {
+        setLoadingTip(`⚠️ ${window.__AMAP_LOAD_ERROR__}`);
+        return;
+    }
+
+    try {
+        await initMap();
+    } catch (e) {
+        setLoadingTip(`⚠️ 地图初始化失败：${e?.message || e}`);
+        return;
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    let spotIdsParam = urlParams.get('spotIds');
+
+    // 如果没有传入景点参数，为了演示效果，默认展示一组经典景点（故宫、兵马俑、西湖、丽江等展示能力）
+    let selectedSpots = [];
+    if (spotIdsParam && spotIdsParam.trim() !== "") {
+        const ids = spotIdsParam.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
+        if (ids.length > 0) {
+            selectedSpots = FULL_SPOTS_DB.filter(spot => ids.includes(spot.id));
+        }
+    }
+
+    // 若没有有效参数，不显示初始路线
+    if (selectedSpots.length === 0) {
+        document.getElementById('loadingTip').style.display = 'none';
+        document.getElementById('route-sidecard').style.display = 'none';
+        return;
+    }
+
+    // 核心：计算最优路径顺序 (贪心最近邻)
+    const optimalOrder = computeOptimalRoute(selectedSpots);
+    currentRouteSpots = optimalOrder;
+
+    // 绘制地图路线
+    await drawOptimalRouteOnMap(optimalOrder);
+    updateRouteCard(optimalOrder);
+    rebindInteractionsForGeneratedRoute();
+
+    // 仅在携带 spotIds 的跳转场景执行一次硬重置，兜底修复“绘制后无法拖拽缩放”
+    if (spotIdsParam && spotIdsParam.trim() !== "") {
+        await hardResetMapAndRedraw(optimalOrder);
+        rebindInteractionsForGeneratedRoute();
+        setTimeout(() => rebindInteractionsForGeneratedRoute(), 250);
+    }
+
+    // 隐藏loading
+    hideLoadingTip();
+
+    // 增加一个全局重置视野按钮
+    const resetBtn = document.getElementById('reset-view');
+    if (resetBtn) {
+        resetBtn.onclick = () => {
+            if (currentPolyline) {
+                map.setFitView([currentPolyline], false, { padding: 55 });
+            } else if (currentMarkers.length) {
+                map.setFitView(currentMarkers);
+            }
+        };
+    }
+
+    // 增加生成旅游攻略按钮
+    const guideBtn = document.getElementById('generate-guide');
+    console.log('Guide button element:', guideBtn);
+    console.log('Current route spots:', currentRouteSpots);
+    if (guideBtn) {
+        guideBtn.onclick = () => {
+            console.log('Guide button clicked');
+            console.log('Current route spots length:', currentRouteSpots.length);
+            if (currentRouteSpots.length > 0) {
+                const spotIds = currentRouteSpots.map(spot => spot.id).join(',');
+                console.log('Redirecting to guide with spotIds:', spotIds);
+                window.location.href = `/guide?spotIds=${spotIds}`;
+            } else {
+                alert('请先选择景点生成路线');
+            }
+        };
+    }
+}
+
+// 添加路线额外优化: 在控制台输出提示, 并在窗口加载完毕后启动
+window.onload = () => {
+    // 路线类型切换：本页直接重新规划并绘制
+    const modeSelect = document.getElementById('routeModeSelect');
+    if (modeSelect) {
+        modeSelect.addEventListener('change', async () => {
+            currentRouteMode = modeSelect.value || 'driving';
+            if (!currentRouteSpots?.length) return;
+            setLoadingTip('🧭 正在切换路线类型并重新规划 ...');
+            try {
+                await drawOptimalRouteOnMap(currentRouteSpots);
+            } finally {
+                hideLoadingTip();
+            }
+        });
+    }
+
+    loadRouteFromURL().catch(err => {
+        console.error(err);
+        setLoadingTip(`⚠️ 地图加载异常：${err?.message || err}`);
+        setTimeout(() => hideLoadingTip(), 2600);
+    });
+
+    window.addEventListener('resize', () => {
+        if (!map) return;
+        try {
+            map.resize();
+            enforceMapInteractions();
+        } catch (e) {
+            // ignore
+        }
+    });
+};
+
+// 暴露备用方法，用于动态刷新（如果以后页面内嵌选择器）
+window.refreshRouteWithSpots = (spotIdsArray) => {
+    const spots = FULL_SPOTS_DB.filter(s => spotIdsArray.includes(s.id));
+    if(spots.length) {
+        const newRoute = computeOptimalRoute(spots);
+        currentRouteSpots = newRoute;
+        drawOptimalRouteOnMap(newRoute);
+        updateRouteCard(newRoute);
+    }
+};
+</script>
+</body>
+</html>
