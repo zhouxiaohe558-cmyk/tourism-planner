@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>路线规划 - AI智能旅游规划 | 智能行程规划系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            list-style: none;
+            text-decoration: none;
+            font-family: "微软雅黑", "Segoe UI", Roboto, sans-serif;
+        }
+        html, body {
+            height: 100%;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* 顶部导航栏 */
+        header {
+            width: 100%;
+            height: 80px;
+            background: #2c3e4e;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 60px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            position: relative;
+            z-index: 10;
+        }
+        .logo {
+            height: 46px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+        nav ul {
+            display: flex;
+            gap: 48px;
+        }
+        nav ul li a {
+            color: #f5f5f5;
+            font-size: 17px;
+            font-weight: 600;
+            transition: all 0.2s;
+            letter-spacing: 1px;
+        }
+        nav ul li a:hover,
+        nav ul li a.active {
+            color: #ffc107;
+            border-bottom: 2px solid #ffc107;
+            padding-bottom: 6px;
+        }
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: #fff;
+            border-radius: 32px;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        .search-box input {
+            width: 220px;
+            height: 38px;
+            padding: 0 16px;
+            border: none;
+            outline: none;
+            font-size: 14px;
+        }
+        .search-box button {
+            width: 44px;
+            height: 38px;
+            background: #ffc107;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            transition: 0.2s;
+            color: #2c3e4e;
+            font-weight: bold;
+        }
+        .search-box button:hover {
+            background: #e6a800;
+        }
+
+        /* 三栏主体容器 */
+        .route-container {
+            width: 100%;
+            height: calc(100vh - 80px);
+            display: flex;
+            gap: 24px;
+            padding: 28px 36px;
+            box-sizing: border-box;
+            background: #eef2f5;
+        }
+        .panel {
+            flex: 1;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease;
+            background: white;
+        }
+        .panel:hover {
+            transform: translateY(-3px);
+        }
+        .panel-header {
+            padding: 24px 20px;
+            color: white;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .panel-header h2 {
+            font-size: 26px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-weight: 700;
+        }
+        .panel-header p {
+            font-size: 14px;
+            opacity: 0.9;
+            letter-spacing: 1px;
+        }
+        .panel-body {
+            padding: 22px 20px;
+            background: #ffffff;
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+        .panel-left .panel-header {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+        }
+        .panel-middle .panel-header {
+            background: linear-gradient(135deg, #F9A825, #EF6C00);
+        }
+        .panel-right .panel-header {
+            background: linear-gradient(135deg, #FB8C00, #E65100);
+        }
+
+        /* 三级联动样式 */
+        .level-title {
+            font-size: 16px;
+            color: #1e2a36;
+            margin-bottom: 14px;
+            font-weight: 700;
+            border-left: 4px solid #ffaa00;
+            padding-left: 12px;
+        }
+        .province-tabs, .city-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+        .province-tab, .city-tab {
+            padding: 8px 20px;
+            border: 2px solid #ffaa00;
+            color: #ff8800;
+            border-radius: 40px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .province-tab.active, .city-tab.active {
+            background: #ffaa00;
+            color: white;
+            border-color: #ffaa00;
+            box-shadow: 0 4px 8px rgba(255,170,0,0.3);
+        }
+        .province-tab:hover, .city-tab:hover {
+            transform: translateY(-2px);
+            background: #fff0db;
+        }
+
+        /* 景点列表卡片样式 - 带图片 */
+        #spots-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .spot-item {
+            padding: 16px;
+            border: 1px solid #e9ecef;
+            border-radius: 20px;
+            transition: all 0.25s;
+            cursor: pointer;
+            display: flex;
+            gap: 16px;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+        .spot-item:hover {
+            border-color: #ffaa00;
+            background: #fffcf0;
+            transform: scale(1.01);
+            box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+        }
+        .spot-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 16px;
+            object-fit: cover;
+            flex-shrink: 0;
+            background: #f0f0f0;
+        }
+        .spot-info {
+            flex: 1;
+        }
+        .spot-checkbox {
+            width: 20px;
+            height: 20px;
+            accent-color: #ffaa00;
+            margin-top: 6px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .spot-name {
+            font-size: 18px;
+            font-weight: 800;
+            color: #1f2d3a;
+            margin-bottom: 6px;
+        }
+        .spot-desc {
+            font-size: 13px;
+            color: #6c7a8a;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        .detail-btn {
+            margin-top: 6px;
+            padding: 5px 14px;
+            border: none;
+            background: #ffaa00;
+            color: #2c3e4e;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .detail-btn:hover {
+            background: #e68900;
+            color: white;
+        }
+
+        /* 已选景点标签 */
+        .selected-title {
+            font-size: 22px;
+            color: #1f2d3d;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+        .empty-message {
+            text-align: center;
+            color: #adb5bd;
+            font-size: 16px;
+            margin: 50px 0;
+            background: #f8f9fa;
+            padding: 24px;
+            border-radius: 32px;
+        }
+        #selected-spots-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 28px;
+            min-height: 100px;
+        }
+        .selected-spot-tag {
+            padding: 8px 18px;
+            background: #ffaa00;
+            color: white;
+            border-radius: 40px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        }
+        .remove-spot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.35);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            transition: 0.2s;
+        }
+        .remove-spot:hover {
+            background: #c0392b;
+            transform: scale(1.1);
+        }
+        .selected-info {
+            background: #fef7e6;
+            padding: 20px;
+            border-radius: 24px;
+            border: 1px solid #ffdd99;
+        }
+        .selected-info p {
+            margin: 12px 0;
+            color: #4a5b6e;
+            font-size: 15px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* 右侧推荐区 */
+        .placeholder {
+            text-align: center;
+            margin-top: 80px;
+            color: #b0bec5;
+        }
+        .placeholder-icon {
+            font-size: 70px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        #generate-btn {
+            width: 100%;
+            margin-top: 28px;
+            padding: 15px;
+            background: linear-gradient(95deg, #ffaa00, #ff8800);
+            color: white;
+            border: none;
+            border-radius: 48px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.25s;
+            box-shadow: 0 6px 14px rgba(255,136,0,0.3);
+        }
+        #generate-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 22px rgba(255,102,0,0.4);
+        }
+        #generate-btn:disabled {
+            background: #cbd5e1;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        /* 加载动画 */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+            z-index: 9999;
+            backdrop-filter: blur(4px);
+        }
+        .loading.hidden { display: none; }
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #fff3e0;
+            border-top: 5px solid #ffaa00;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 弹窗样式 */
+        .detail-mask {
+            position: fixed;
+            top:0;left:0;
+            width:100%;height:100%;
+            background:rgba(0,0,0,0.75);
+            z-index:10000;
+            display:none;
+            justify-content:center;
+            align-items:center;
+            backdrop-filter: blur(3px);
+        }
+        .detail-box {
+            width: 760px;
+            background:#fff;
+            border-radius: 32px;
+            overflow: hidden;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: fadeInUp 0.25s;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        .detail-img {
+            width:100%;
+            height: 320px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .detail-content {
+            padding: 28px 32px;
+        }
+        .detail-title {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            color:#1e2a36;
+        }
+        .detail-info p {
+            margin: 14px 0;
+            color: #2c3e4e;
+            line-height: 1.5;
+            font-size: 15px;
+        }
+        .detail-close {
+            position: absolute;
+            top: 20px;
+            right: 32px;
+            color: white;
+            font-size: 42px;
+            cursor: pointer;
+            font-weight: bold;
+            background: rgba(0,0,0,0.5);
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: 0.2s;
+        }
+        .detail-close:hover {
+            background: #ff5722;
+            transform: rotate(90deg);
+        }
+        @media (max-width: 1100px) {
+            .route-container { padding: 16px 20px; gap: 16px;}
+            nav ul { gap: 28px; }
+            header { padding: 0 30px; }
+            .spot-image { width: 60px; height: 60px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="https://img.icons8.com/fluency/96/ffffff/mountain.png" alt="旅游logo" class="logo">
+        <nav>
+            <ul>
+                <li><a href="/">首页</a></li>
+                <li><a href="/city">热门城市</a></li>
+                <li><a href="/route" class="active">路线规划</a></li>
+                <li><a href="/map">最优游览路线地图</a></li>
+                <li><a href="/guide">旅游攻略</a></li>
+                <li><a href="#">精选留言</a></li>
+            </ul>
+        </nav>
+        <div class="search-box">
+            <input type="text" placeholder="搜索景点或攻略">
+            <button>🔍</button>
+        </div>
+    </header>
+
+    <div class="route-container">
+        <div class="panel panel-left">
+            <div class="panel-header">
+                <h2>📍 🎯 景点选择</h2>
+                <p>智能推荐 · 三级联动筛选</p>
+            </div>
+            <div class="panel-body">
+                <p class="level-title">第一步：探索省份</p>
+                <div class="province-tabs" id="province-tabs"></div>
+                <p class="level-title">第二步：漫游城市</p>
+                <div class="city-tabs" id="city-tabs"></div>
+                <p class="level-title">第三步：精选景点</p>
+                <div id="spots-list"></div>
+            </div>
+        </div>
+
+        <div class="panel panel-middle">
+            <div class="panel-header">
+                <h2>🤍 💖 心愿清单</h2>
+                <p>勾选心仪景点，AI为您串联</p>
+            </div>
+            <div class="panel-body">
+                <h3 class="selected-title">已选择 <span id="selected-count">0</span> 个景点</h3>
+                <div id="selected-spots-list">
+                    <div class="empty-message">✨ 暂无选择景点<br>从左侧挑选向往的目的地吧</div>
+                </div>
+                <div class="selected-info">
+                    <p>🏙️ 涉及城市/区域: <span id="cities-count">0</span> 个</p>
+                    <p>⏰ 预估游览时长: <span id="time-estimate">--</span></p>
+                    <p>📏 估算串联距离: <span id="distance-estimate">-- km</span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-right">
+            <div class="panel-header">
+                <h2>🏔️ 🚀 智能路线</h2>
+                <p>AI 动态规划最优路径</p>
+            </div>
+            <div class="panel-body">
+                <div id="route-result">
+                    <div class="placeholder">
+                        <div class="placeholder-icon">🗺️</div>
+                        <p>选择景点后一键生成</p>
+                        <small>点击下方按钮 · 跳转地图智能导航</small>
+                    </div>
+                </div>
+                <button id="generate-btn" disabled>✨ 生成最优游览路线 ✨</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+        <p>🚀 AI 正在计算最优路径，为您串联风景线...</p>
+    </div>
+
+    <div class="detail-mask" id="detailMask">
+        <span class="detail-close" id="detailClose">&times;</span>
+        <div class="detail-box">
+            <img class="detail-img" id="detailImg" alt="景点图">
+            <div class="detail-content">
+                <h2 class="detail-title" id="detailTitle"></h2>
+                <div class="detail-info" id="detailInfo"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ======================= 景点数据库（含图片URL） =======================
+const FULL_SPOTS_DB = [
+    {id:1, name:"天安门广场", city:"北京", province:"北京", address:"北京市东城区长安街", lng:116.4038, lat:39.9074, description:"首都中心地标广场", ticket:"免费预约", openTime:"升旗开放", detail:"世界最大城市中心广场，观看升旗仪式", img:"https://ts1.tc.mm.bing.net/th/id/R-C.54ed93e01727385407f399e5868b25a3?rik=PUR1npLdQk2OGQ&riu=http%3a%2f%2fimg.pconline.com.cn%2fimages%2fupload%2fupc%2ftx%2fphotoblog%2f1103%2f15%2fc0%2f7004282_7004282_1300125724343.jpg&ehk=0F%2fP0ej25hP6HuAOEv9vNKNDdhDn5TXdJq6M%2b2eT9L8%3d&risl=&pid=ImgRaw&r=0"},
+    {id:2, name:"故宫博物院", city:"北京", province:"北京", address:"北京市东城区景山前街", lng:116.3972, lat:39.9175, description:"明清皇家宫殿建筑群", ticket:"60元", openTime:"08:30-17:00", detail:"世界现存最大最完整皇家古建筑群", img:"https://ts1.tc.mm.bing.net/th/id/R-C.d2300ee1472b98916eab58d20931e3e4?rik=FlDrLo094CbtvQ&riu=http%3a%2f%2fn.sinaimg.cn%2fsinacn19%2f293%2fw1600h1093%2f20180505%2f5a2e-hacuuvt6745239.jpg&ehk=4aT1eoAo9aUv5Byl2P3aMIuKaEaa2UB60zLU%2fLraNMw%3d&risl=&pid=ImgRaw&r=0"},
+    {id:3, name:"八达岭长城", city:"北京", province:"北京", address:"北京市延庆区", lng:116.0258, lat:40.3646, description:"万里长城核心段落", ticket:"40元", openTime:"07:30-17:30", detail:"中华民族象征，世界文化遗产", img:"https://ts1.tc.mm.bing.net/th/id/R-C.c9480919f06d39fc84945b6f4f916f00?rik=9Og3Htjj2T%2fb7Q&riu=http%3a%2f%2f1842.img.pp.sohu.com.cn%2fimages%2f2012%2f3%2f31%2f21%2f8%2fe28662398_13729e3d0e3g215_b.jpg&ehk=ptn63B7Gjvorf8nW%2fKaMMw17oDPdys5Z4D9pUTiVHu4%3d&risl=&pid=ImgRaw&r=0"},
+    {id:4, name:"天津之眼", city:"天津", province:"天津", address:"天津市红桥区永乐桥", lng:117.1802, lat:39.1522, description:"海河巨型摩天轮地标", ticket:"70元", openTime:"09:30-21:30", detail:"天津城市标志性景观", img:"https://bpic.588ku.com/back_origin_min_pic/20/05/27/4cce5e6688423473218a45756bca7ae8.jpg"},
+    {id:5, name:"承德避暑山庄", city:"承德", province:"河北", address:"河北省承德市", lng:117.2636, lat:40.6697, description:"清代皇家避暑园林", ticket:"130元", openTime:"08:00-17:30", detail:"世界最大皇家古典园林", img:"https://ts1.tc.mm.bing.net/th/id/R-C.e79aa39f47671e83e744b90ee34a5b1d?rik=Le%2b9GgxavK8saw&riu=http%3a%2f%2fpic5.40017.cn%2f03%2f000%2f62%2fdc%2frBANB1x98g6AXi3iAAJ_-S2gUio500.jpg&ehk=Y3atNX%2bhI%2bnOUpvSWW%2b%2bLfdY2vYGTrmxsqdwoHQsQY8%3d&risl=&pid=ImgRaw&r=0"},
+    {id:6, name:"平遥古城", city:"晋中", province:"山西", address:"山西省晋中市平遥县", lng:112.1768, lat:37.1232, description:"保存完整明清古城", ticket:"125元", openTime:"全天开放", detail:"中国保存最完好古县城", img:"https://img.pconline.com.cn/images/upload/upc/tx/photoblog/1810/03/c1/112510718_1538524220617_mthumb.jpg"},
+    {id:7, name:"秦始皇兵马俑", city:"西安", province:"陕西", address:"西安市临潼区", lng:109.2719, lat:34.3846, description:"世界八大奇迹", ticket:"120元", openTime:"08:30-17:00", detail:"秦始皇陵兵马俑博物馆", img:"https://ts1.tc.mm.bing.net/th/id/R-C.bda9d69b668b7f24cbc7d8609ea96a11?rik=o13IyeZO6w34NA&riu=http%3a%2f%2fseopic.699pic.com%2fphoto%2f50094%2f9350.jpg_wh1200.jpg&ehk=z45R7GhV0%2bjk5Cbt2zAj%2bhS7nxnNgzg9LAUg2TfJctg%3d&risl=&pid=ImgRaw&r=0"},
+    {id:8, name:"华清宫", city:"西安", province:"陕西", address:"西安市临潼区", lng:109.2122, lat:34.2659, description:"唐皇家温泉行宫", ticket:"120元", openTime:"07:30-19:00", detail:"长恨歌演出所在地", img:"https://youimg1.c-ctrip.com/target/100f080000003gny1ED2B_C_640_10000.jpg"},
+    {id:9, name:"敦煌莫高窟", city:"敦煌", province:"甘肃", address:"甘肃敦煌市", lng:94.8025, lat:40.1476, description:"千年佛教石窟艺术", ticket:"238元", openTime:"08:30-17:30", detail:"世界三大石窟艺术宝库", img:"https://img.pconline.com.cn/images/upload/upc/tx/itbbs/1807/16/c21/97536340_1531732752737.jpg"},
+    {id:10, name:"青海湖", city:"海南藏族", province:"青海", address:"青海海南州", lng:100.1546, lat:36.5712, description:"中国最大内陆咸水湖", ticket:"90元", openTime:"全天开放", detail:"高原绝美湖泊自然风光", img:"https://bpic.588ku.com/back_origin_min_pic/19/10/22/4d5fbb8a1ecd6677bb2370e921727378.jpg!/fw/750/quality/99/unsharp/true/compress/true"},
+    {id:11, name:"沙坡头", city:"中卫", province:"宁夏", address:"宁夏中卫市", lng:104.9541, lat:37.4708, description:"沙漠黄河旅游区", ticket:"110元", openTime:"08:00-18:00", detail:"沙漠与黄河交汇奇观", img:"https://img.pconline.com.cn/images/upload/upc/tx/photoblog/1510/15/c22/14009547_14009547_1444919788406.jpg"},
+    {id:12, name:"天山天池", city:"昌吉", province:"新疆", address:"新疆昌吉阜康市", lng:88.1169, lat:43.8957, description:"高山湖泊世界遗产", ticket:"155元", openTime:"08:00-19:00", detail:"西王母神话圣地", img:"https://img.pconline.com.cn/images/upload/upc/tx/photoblog/2208/28/c0/330970323_1661652494494.jpg"},
+    {id:13, name:"哈尔滨冰雪大世界", city:"哈尔滨", province:"黑龙江", address:"黑龙江哈尔滨市", lng:126.5626, lat:45.7765, description:"世界级冰雪主题乐园", ticket:"298元", openTime:"冬季开放", detail:"亚洲最大冰雪艺术景区", img:"https://ts1.tc.mm.bing.net/th/id/R-C.c429646f702dc1c8e7620fd0cb559b98?rik=X9zzt0Y8pmwytw&riu=http%3a%2f%2fn.sinaimg.cn%2fsinacn%2fw2048h1536%2f20180111%2f5a5c-fyqnick4780255.jpg&ehk=HH0YgkHdWFPTY4PPQKjZshQV5pDyVJmFN764tZzWhsc%3d&risl=&pid=ImgRaw&r=0"},
+    {id:14, name:"沈阳故宫", city:"沈阳", province:"辽宁", address:"辽宁沈阳市", lng:123.4567, lat:41.8036, description:"清代开国皇宫", ticket:"50元", openTime:"08:30-17:00", detail:"仅次于北京故宫皇家宫殿", img:"https://ts1.tc.mm.bing.net/th/id/R-C.efbde2f80892a4fcee591c0d7c024e55?rik=VLMRa2YtV0fXrA&riu=http%3a%2f%2fn.sinaimg.cn%2fsinacn11%2f364%2fw640h524%2f20180702%2fc521-hespqry5066982.jpg&ehk=99anbkrZbIxQTjHn7vHeN13RWpkSh96Pd3pQdWVziSc%3d&risl=&pid=ImgRaw&r=0"},
+    {id:15, name:"长白山天池", city:"延边", province:"吉林", address:"吉林延边州", lng:128.1722, lat:42.0167, description:"火山口高山湖泊", ticket:"105元", openTime:"07:00-18:00", detail:"东北第一神山天池景观", img:"https://ts1.tc.mm.bing.net/th/id/R-C.05ed7b0d18faa2d637f6084a4cbead59?rik=peX%2f0E1RcSuyrQ&riu=http%3a%2f%2fimg.pconline.com.cn%2fimages%2fupload%2fupc%2ftx%2fphotoblog%2f1007%2f31%2fc2%2f4693300_4693300_1280560115921.jpg&ehk=p96y8qpx3dfoKusFQ6CuaLHpA%2bbxHDF5Cjd4YMIRGQc%3d&risl=&pid=ImgRaw&r=0"},
+    {id:16, name:"东方明珠塔", city:"上海", province:"上海", address:"上海市浦东新区", lng:121.4992, lat:31.2397, description:"上海地标电视塔", ticket:"199元", openTime:"09:00-21:30", detail:"上海城市象征高空观光", img:"https://pic.nximg.cn/file/20221226/18116742_164522649127_2.jpg"},
+    {id:17, name:"外滩", city:"上海", province:"上海", address:"上海黄浦区中山东一路", lng:121.4904, lat:31.2368, description:"万国建筑博览群", ticket:"免费", openTime:"全天开放", detail:"黄浦江畔百年历史建筑群", img:"https://images.unsplash.com/photo-1534190760996-d0748a9cd21f?w=400&h=300&fit=crop"},
+    {id:18, name:"杭州西湖", city:"杭州", province:"浙江", address:"杭州市西湖区", lng:120.1450, lat:30.2590, description:"江南世界级风景名胜", ticket:"免费", openTime:"全天开放", detail:"世界文化遗产西湖十景", img:"https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=400&h=300&fit=crop"},
+    {id:19, name:"黄山风景区", city:"黄山", province:"安徽", address:"安徽黄山市", lng:118.1732, lat:30.1435, description:"天下第一奇山", ticket:"190元", openTime:"06:00-18:00", detail:"奇松怪石云海世界遗产", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:20, name:"鼓浪屿", city:"厦门", province:"福建", address:"福建厦门市", lng:118.0789, lat:24.4496, description:"海上花园文艺小岛", ticket:"35元", openTime:"全天开放", detail:"世界文化遗产万国建筑", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:21, name:"庐山", city:"九江", province:"江西", address:"江西九江市庐山", lng:115.9043, lat:29.5627, description:"匡庐奇秀甲天下", ticket:"160元", openTime:"07:00-18:00", detail:"世界文化遗产避暑名山", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:22, name:"泰山", city:"泰安", province:"山东", address:"山东泰安市", lng:117.1215, lat:36.1533, description:"五岳之首泰山", ticket:"115元", openTime:"全天开放", detail:"五岳独尊世界文化自然双遗产", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:23, name:"龙门石窟", city:"洛阳", province:"河南", address:"河南洛阳市", lng:112.4692, lat:34.6653, description:"三大石窟佛教艺术宝库", ticket:"90元", openTime:"07:30-21:00", detail:"世界文化遗产石刻艺术", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:24, name:"黄鹤楼", city:"武汉", province:"湖北", address:"湖北武汉市武昌区", lng:114.3065, lat:30.5462, description:"江南三大名楼之首", ticket:"70元", openTime:"08:30-17:30", detail:"千古历史文化名楼", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:25, name:"橘子洲", city:"长沙", province:"湖南", address:"湖南长沙市", lng:112.9528, lat:28.9287, description:"湘江江心伟人沙洲", ticket:"免费", openTime:"07:00-22:00", detail:"毛主席青年艺术雕塑所在地", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:26, name:"张家界武陵源", city:"张家界", province:"湖南", address:"湖南张家界市", lng:110.4215, lat:29.3265, description:"阿凡达奇幻石英砂岩峰林", ticket:"228元", openTime:"07:00-18:00", detail:"世界自然遗产奇峰地貌", img:"https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=400&h=300&fit=crop"},
+    {id:27, name:"广州塔", city:"广州", province:"广东", address:"广东广州市海珠区", lng:113.3271, lat:23.1200, description:"小蛮腰城市地标", ticket:"150元", openTime:"09:30-22:30", detail:"中国第一高电视塔", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:28, name:"珠海长隆海洋王国", city:"珠海", province:"广东", address:"广东珠海市横琴", lng:113.5262, lat:22.1193, description:"大型海洋主题乐园", ticket:"380元", openTime:"10:00-21:30", detail:"世界级海洋度假景区", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:29, name:"桂林漓江", city:"桂林", province:"广西", address:"广西桂林市漓江", lng:110.2896, lat:25.2781, description:"桂林山水甲天下", ticket:"游船190元", openTime:"08:00-18:00", detail:"喀斯特山水风光世界遗产", img:"https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=400&h=300&fit=crop"},
+    {id:30, name:"三亚亚龙湾", city:"三亚", province:"海南", address:"海南三亚市亚龙湾", lng:109.5112, lat:18.3132, description:"东方夏威夷最美海滩", ticket:"免费", openTime:"全天开放", detail:"优质白沙碧海热带海滨", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:31, name:"重庆洪崖洞", city:"重庆", province:"重庆", address:"重庆渝中区嘉滨路", lng:106.5836, lat:29.5592, description:"山城夜景网红吊脚楼", ticket:"免费", openTime:"全天开放", detail:"立体魔幻山城夜景地标", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:32, name:"九寨沟", city:"阿坝", province:"四川", address:"四川阿坝九寨沟县", lng:103.8828, lat:33.2686, description:"人间仙境彩林湖泊", ticket:"169元", openTime:"08:00-17:00", detail:"世界自然遗产水景之王", img:"https://preview.qiantucdn.com/58pic/20240711/00658PIC1iK9zB3KP58PIC4Ht_PIC2018_PIC2018aiys_PIC2018.jpg!w1024_new_small_1"},
+    {id:33, name:"成都大熊猫基地", city:"成都", province:"四川", address:"四川成都市成华区", lng:104.1312, lat:30.7417, description:"大熊猫繁育研究基地", ticket:"55元", openTime:"07:30-18:00", detail:"全球最大大熊猫科研繁育地", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:34, name:"黄果树瀑布", city:"安顺", province:"贵州", address:"贵州安顺市", lng:105.6761, lat:25.9831, description:"亚洲第一大瀑布", ticket:"160元", openTime:"07:30-18:00", detail:"世界级瀑布自然风光", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:35, name:"丽江古城", city:"丽江", province:"云南", address:"云南丽江市", lng:100.2332, lat:26.8721, description:"纳西族高原千年古城", ticket:"免费", openTime:"全天开放", detail:"世界文化遗产纳西风情古镇", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:36, name:"大理洱海", city:"大理", province:"云南", address:"云南大理市", lng:100.2282, lat:25.6042, description:"高原浪漫湖泊", ticket:"免费", openTime:"全天开放", detail:"苍山洱海风花雪月风光", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:37, name:"维多利亚港", city:"香港", province:"香港", address:"香港维多利亚港", lng:114.1832, lat:22.2935, description:"世界著名天然海港夜景", ticket:"免费", openTime:"全天开放", detail:"世界三大天然良港夜景", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:38, name:"大三巴牌坊", city:"澳门", province:"澳门", address:"澳门大三巴", lng:113.5489, lat:22.1912, description:"澳门历史地标遗迹", ticket:"免费", openTime:"全天开放", detail:"澳门标志性历史建筑", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:39, name:"垦丁海滩", city:"屏东", province:"台湾", address:"台湾屏东县垦丁", lng:120.7417, lat:22.0027, description:"台湾南部热带海滨", ticket:"免费", openTime:"全天开放", detail:"台湾最美热带海岸风光", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:40, name:"呼伦贝尔草原", city:"呼伦贝尔", province:"内蒙古", address:"内蒙古呼伦贝尔", lng:119.7622, lat:49.2137, description:"世界最美草原", ticket:"免费", openTime:"夏季开放", detail:"广袤无垠草原风光", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:41, name:"布达拉宫", city:"拉萨", province:"西藏", address:"西藏拉萨市", lng:91.1177, lat:29.6582, description:"世界屋脊雪域宫殿", ticket:"200元预约", openTime:"09:00-16:00", detail:"藏传佛教圣地，世界文化遗产", img:"https://images.unsplash.com/photo-1594712943132-45a743166c12?w=400&h=300&fit=crop"},
+    {id:42, name:"都江堰", city:"都江堰", province:"四川", address:"四川省成都市都江堰市", lng:103.6153, lat:31.0080, description:"世界文化遗产，古代水利工程奇迹", ticket:"80元", openTime:"08:00-18:00", detail:"两千多年仍在发挥作用的无坝引水水利工程，李冰父子杰作", img:"https://picsum.photos/id/96/500/320"},
+    {id:43, name:"青城山", city:"都江堰", province:"四川", address:"四川省成都市都江堰市青城山镇", lng:103.5849, lat:30.9947, description:"道教名山，青城天下幽", ticket:"90元", openTime:"08:00-17:30", detail:"前山问道，后山观景，植被茂密，避暑胜地", img:"https://youimg1.c-ctrip.com/target/fd/tg/g5/M06/D3/95/CggYr1b5-cWAG-cYAD9huP_1GWc004_D_10000_1200.jpg?proc=autoorient"},
+    {id:44, name:"峨眉山", city:"乐山", province:"四川", address:"四川省乐山市峨眉山市", lng:103.4352, lat:29.5871, description:"佛教名山，普贤菩萨道场", ticket:"160元", openTime:"07:00-18:00", detail:"云海、日出、佛光、圣灯四大奇观，猴子灵趣", img:"https://ts1.tc.mm.bing.net/th/id/R-C.2c40392ceaaaacb38320632b5044f2ba?rik=vI59XD%2fyWcluUg&riu=http%3a%2f%2fn.sinaimg.cn%2fsinacn%2fw1920h1080%2f20180114%2f89fa-fyqrewh8572637.jpg&ehk=hwJwHe0mMtlJO9vk6x3mFuYEYdUw925n9vLLswBsBoI%3d&risl=&pid=ImgRaw&r=0"},
+    {id:45, name:"乐山大佛", city:"乐山", province:"四川", description:"世界最大石刻坐佛", address:"四川省乐山市市中区", openTime:"07:30-18:30", ticket:"80元", detail:"71米高，依山凿成，面对三江交汇，雄伟壮观", img:"https://www.shuomingshu.cn/wp-content/uploads/images/2022/12/03/9786b7409eb742268d031dd66d452493_w3v2dzx1t2c.jpg"},
+    {id:46, name:"稻城亚丁", city:"甘孜", province:"四川", description:"蓝色星球上的最后一片净土", address:"四川省甘孜藏族自治州稻城县", openTime:"07:00-17:00", ticket:"266元", detail:"三神山（仙乃日、央迈勇、夏诺多吉）与牛奶海、五色海", img:"https://ts1.tc.mm.bing.net/th/id/R-C.f9dc70690642477177d31ed3e5e5c66c?rik=zdzZT9xrm5eD1A&riu=http%3a%2f%2fn.sinaimg.cn%2ftranslate%2f251%2fw1080h771%2f20190406%2fItSq-hvhrcxm4877678.jpg&ehk=sbVtvSLGMnHFKk7Hzmn76GHtwIh0VCD9P9d6fjhkBZA%3d&risl=&pid=ImgRaw&r=0"},
+    {id:47, name:"色达五明佛学院", city:"色达", province:"四川", description:"全球最大藏传佛学院", address:"四川省甘孜州色达县洛若镇", openTime:"全天开放", ticket:"免费", detail:"漫山遍野的红房子，震撼心灵的宗教圣地", img:"https://img.pconline.com.cn/images/upload/upc/tx/photoblog/1011/06/c9/5773683_5773683_1289048424661.jpg"},
+    {id:48, name:"四姑娘山", city:"阿坝", province:"四川", description:"东方阿尔卑斯", address:"四川省阿坝藏族羌族自治州小金县", openTime:"08:00-17:00", ticket:"150元", detail:"双桥沟、长坪沟、海子沟，徒步与攀岩胜地", img:"https://www.shuomingshu.cn/wp-content/uploads/images/2022/12/08/12ee4540dc654f15ab23953896d3f2fa_2rmk4j5ydbf.jpg"},
+    {id:49, name:"泸沽湖", city:"凉山", province:"四川", description:"神秘的母系氏族摩梭人聚居地", address:"四川省凉山州盐源县", openTime:"全天开放", ticket:"70元", detail:"草海、走婚桥、猪槽船，湖水清澈见底", img:"https://youimg1.c-ctrip.com/target/10091d000001eiy5k1B59.jpg"},
+    {id:50, name:"宽窄巷子", city:"成都", province:"四川", description:"老成都底片，新都市客厅", address:"四川省成都市青羊区", openTime:"全天开放", ticket:"免费", detail:"宽巷子、窄巷子、井巷子，清代古街道，美食云集", img:"https://img.pconline.com.cn/images/upload/upc/tx/itbbs/2004/18/c6/203644417_1587188253151_mthumb.jpg"},
+    {id:51, name:"锦里古街", city:"成都", province:"四川", description:"西蜀第一街", address:"四川省成都市武侯区武侯祠大街231号", openTime:"全天开放", ticket:"免费", detail:"三国文化主题街区，红灯笼、川剧变脸、地道小吃", img:"https://img1.qunarzz.com/travel/d6/201407/21/f668722d710503b8c8d65eac.jpg_r_680x509x95_4c84e236.jpg"},
+    {id:52, name:"武侯祠", city:"成都", province:"四川", description:"三国文化圣地", address:"四川省成都市武侯区", openTime:"08:00-20:00", ticket:"50元", detail:"中国唯一君臣合祀祠庙，刘备与诸葛亮纪念地", img:"https://n.sinaimg.cn/sinakd10121/799/w2000h1199/20200506/2fbc-iteyfwv8239059.jpg"},
+    {id:53, name:"杜甫草堂", city:"成都", province:"四川", description:"诗圣故居", address:"四川省成都市青羊区青华路37号", openTime:"08:00-18:30", ticket:"50元", detail:"杜甫流寓成都时的居所，茅屋故居，红墙夹道", img:"https://tr-osdcp.qunarzz.com/tr-osd-tr-touch/img/dc5d3505b53a25bba77d901190bf813f.jpeg"},
+    {id:54, name:"成都大熊猫基地", city:"成都", province:"四川", description:"大熊猫繁育研究基地", address:"四川省成都市成华区熊猫大道1375号", openTime:"07:30-18:00", ticket:"55元", detail:"看熊猫产房、幼年熊猫、太阳产房，国宝乐园", img:"https://ts1.tc.mm.bing.net/th/id/R-C.6e87d87fe2c7550fad6016996b8c2dc5?rik=EDUlPj3wcU8X1Q&riu=http%3a%2f%2fvip-public.people.com.cn%2fphoto%2f2024%2f4%2f13%2f1eae027712d54492b6d82040645391e4h40h_s.jpg&ehk=Ogx7uYMEwsGqP4Xe3uGXiyTZ8nvugm5AAQeSY27sscM%3d&risl=&pid=ImgRaw&r=0"},
+    {id:55, name:"九眼桥", city:"成都", province:"四川", description:"成都夜生活地标", address:"四川省成都市锦江区", openTime:"全天开放", ticket:"免费", detail:"安顺廊桥夜景，酒吧一条街，年轻人聚集地", img:"https://ts1.tc.mm.bing.net/th/id/R-C.11c53605de255d701d8581cadf708b4c?rik=pMP%2b6C6mGcKsSg&riu=http%3a%2f%2fp7.itc.cn%2fimages01%2f20200520%2fa9e31a04b2ca4bc68012320a98a6c7ca.JPG&ehk=mmL90S%2boRy%2faKbXp1MD03hD%2fLDG4nRxNdyzcHn51pTM%3d&risl=&pid=ImgRaw&r=0"}
+];
+
+// 构建省份->城市->景点的映射
+function buildProvinceCityMap() {
+    const map = {};
+    FULL_SPOTS_DB.forEach(spot => {
+        const prov = spot.province;
+        const city = spot.city;
+        if (!map[prov]) map[prov] = { cities: new Set(), spotsByCity: {} };
+        map[prov].cities.add(city);
+        if (!map[prov].spotsByCity[city]) map[prov].spotsByCity[city] = [];
+        map[prov].spotsByCity[city].push(spot);
+        if (!map[prov].spotsByCity["全部城市"]) map[prov].spotsByCity["全部城市"] = [];
+        map[prov].spotsByCity["全部城市"].push(spot);
+    });
+    const final = {};
+    for (let prov in map) {
+        final[prov] = {};
+        const citySet = map[prov].cities;
+        for (let city of citySet) {
+            final[prov][city] = map[prov].spotsByCity[city];
+        }
+        final[prov]["全部城市"] = map[prov].spotsByCity["全部城市"];
+    }
+    return final;
+}
+
+const PROVINCE_DATA = buildProvinceCityMap();
+const allSpotsUnified = FULL_SPOTS_DB;
+PROVINCE_DATA["全部省份"] = { "全部城市": allSpotsUnified };
+let allProvinces = Object.keys(PROVINCE_DATA);
+allProvinces = allProvinces.filter(p => p !== "全部省份");
+allProvinces.unshift("全部省份");
+const reordered = { "全部省份": PROVINCE_DATA["全部省份"] };
+allProvinces.forEach(p => { if(p !== "全部省份") reordered[p] = PROVINCE_DATA[p]; });
+window.PROVINCE_DATA = reordered;
+
+let selectProvince = "全部省份";
+let selectCity = "全部城市";
+
+window.onload = () => {
+    initProvinceTabs();
+    initCityTabs();
+    updateStats();
+};
+
+function initProvinceTabs() {
+    const container = document.getElementById('province-tabs');
+    const provinces = Object.keys(PROVINCE_DATA);
+    let html = '';
+    provinces.forEach(prov => {
+        const activeClass = (prov === selectProvince) ? 'active' : '';
+        html += `<div class="province-tab ${activeClass}" data-prov="${prov}">${prov}</div>`;
+    });
+    container.innerHTML = html;
+    document.querySelectorAll('.province-tab').forEach(el => {
+        el.addEventListener('click', (e) => {
+            document.querySelectorAll('.province-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            selectProvince = el.getAttribute('data-prov') || el.innerText;
+            selectCity = "全部城市";
+            initCityTabs();
+            renderSpots();
+        });
+    });
+}
+
+function initCityTabs() {
+    const cityContainer = document.getElementById('city-tabs');
+    const citiesSet = new Set();
+    const provinceObj = PROVINCE_DATA[selectProvince];
+    if (provinceObj) {
+        Object.keys(provinceObj).forEach(cityKey => citiesSet.add(cityKey));
+    }
+    let cityList = Array.from(citiesSet);
+    cityList.sort();
+    let html = `<div class="city-tab active" data-city="全部城市">全部城市</div>`;
+    cityList.forEach(city => {
+        if (city !== "全部城市") {
+            html += `<div class="city-tab" data-city="${city}">${city}</div>`;
+        }
+    });
+    cityContainer.innerHTML = html;
+    selectCity = "全部城市";
+    document.querySelectorAll('.city-tab').forEach(el => {
+        el.addEventListener('click', (e) => {
+            document.querySelectorAll('.city-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            selectCity = el.getAttribute('data-city');
+            renderSpots();
+        });
+    });
+    renderSpots();
+}
+
+function renderSpots() {
+    const spotsContainer = document.getElementById('spots-list');
+    let spotsArray = [];
+    if (PROVINCE_DATA[selectProvince] && PROVINCE_DATA[selectProvince][selectCity]) {
+        spotsArray = PROVINCE_DATA[selectProvince][selectCity];
+    }
+    if (!spotsArray.length) {
+        spotsContainer.innerHTML = `<div style="text-align:center;padding:40px;color:#aaa;">✨ 暂无景点数据，请尝试其他城市</div>`;
+        return;
+    }
+    let html = '';
+    spotsArray.forEach(spot => {
+        const imgUrl = spot.img || 'https://img.icons8.com/color/96/000000/landscape.png';
+        html += `
+            <div class="spot-item" data-spot-id="${spot.id}">
+                <input type="checkbox" class="spot-checkbox" data-id="${spot.id}" data-name="${escapeHtml(spot.name)}">
+                <img class="spot-image" src="${imgUrl}" alt="${spot.name}" onerror="this.src='https://img.icons8.com/color/96/000000/landscape.png'">
+                <div class="spot-info">
+                    <div class="spot-name">${escapeHtml(spot.name)}</div>
+                    <div class="spot-desc">${escapeHtml(spot.description)}</div>
+                    <button class="detail-btn" data-id="${spot.id}">📖 查看景点详情</button>
+                </div>
+            </div>
+        `;
+    });
+    spotsContainer.innerHTML = html;
+    document.querySelectorAll('.spot-checkbox').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+            const id = parseInt(cb.getAttribute('data-id'));
+            const name = cb.getAttribute('data-name');
+            toggleSpot(id, name, cb.checked);
+        });
+    });
+    document.querySelectorAll('.detail-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = parseInt(btn.getAttribute('data-id'));
+            openDetailById(id);
+        });
+    });
+}
+
+function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+
+function toggleSpot(id, name, isChecked) {
+    const selectedDiv = document.getElementById('selected-spots-list');
+    const emptyMsg = selectedDiv.querySelector('.empty-message');
+    if (emptyMsg) emptyMsg.remove();
+    if (isChecked) {
+        if (document.getElementById(`selected-${id}`)) return;
+        const tag = document.createElement('div');
+        tag.className = 'selected-spot-tag';
+        tag.id = `selected-${id}`;
+        tag.innerHTML = `${escapeHtml(name)} <button class="remove-spot" data-id="${id}">&times;</button>`;
+        selectedDiv.appendChild(tag);
+        tag.querySelector('.remove-spot').addEventListener('click', () => removeSpotById(id));
+    } else {
+        const exist = document.getElementById(`selected-${id}`);
+        if (exist) exist.remove();
+    }
+    const count = document.querySelectorAll('#selected-spots-list .selected-spot-tag').length;
+    document.getElementById('selected-count').innerText = count;
+    if (count === 0) {
+        selectedDiv.innerHTML = '<div class="empty-message">✨ 暂无选择景点<br>从左侧挑选向往的目的地吧</div>';
+    }
+    updateStats();
+    document.getElementById('generate-btn').disabled = (count === 0);
+}
+
+function removeSpotById(id) {
+    const checkbox = document.querySelector(`.spot-checkbox[data-id="${id}"]`);
+    if (checkbox && checkbox.checked) {
+        checkbox.checked = false;
+        toggleSpot(id, '', false);
+    } else {
+        const tag = document.getElementById(`selected-${id}`);
+        if (tag) tag.remove();
+        const count = document.querySelectorAll('#selected-spots-list .selected-spot-tag').length;
+        document.getElementById('selected-count').innerText = count;
+        if (count === 0) {
+            const selectedDiv = document.getElementById('selected-spots-list');
+            selectedDiv.innerHTML = '<div class="empty-message">✨ 暂无选择景点<br>从左侧挑选向往的目的地吧</div>';
+        }
+        updateStats();
+        document.getElementById('generate-btn').disabled = (count === 0);
+    }
+}
+
+function updateStats() {
+    const selectedTags = document.querySelectorAll('#selected-spots-list .selected-spot-tag');
+    const count = selectedTags.length;
+    const uniqueCities = new Set();
+    selectedTags.forEach(tag => {
+        const id = parseInt(tag.id.replace('selected-',''));
+        const spot = FULL_SPOTS_DB.find(s => s.id === id);
+        if (spot) uniqueCities.add(`${spot.province}-${spot.city}`);
+    });
+    document.getElementById('cities-count').innerText = uniqueCities.size;
+    document.getElementById('time-estimate').innerText = count > 0 ? (Math.ceil(count * 1.3) + '小时') : '--';
+    document.getElementById('distance-estimate').innerText = count > 0 ? (count * 12 + 'km') : '-- km';
+}
+
+function openDetailById(id) {
+    const spot = FULL_SPOTS_DB.find(s => s.id === id);
+    if (!spot) return;
+    const imgUrl = spot.img || 'https://img.icons8.com/color/96/000000/landscape.png';
+    document.getElementById('detailImg').src = imgUrl;
+    document.getElementById('detailTitle').innerText = spot.name;
+    document.getElementById('detailInfo').innerHTML = `
+        <p>📍 所属省份：${spot.province}</p>
+        <p>🏙️ 城市：${spot.city}</p>
+        <p>📌 地址：${spot.address}</p>
+        <p>⏰ 开放时间：${spot.openTime}</p>
+        <p>🎟️ 门票参考：${spot.ticket}</p>
+        <p>📖 详细介绍：${spot.detail}</p>
+    `;
+    document.getElementById('detailMask').style.display = 'flex';
+}
+
+document.getElementById('detailClose').addEventListener('click', () => {
+    document.getElementById('detailMask').style.display = 'none';
+});
+document.getElementById('detailMask').addEventListener('click', (e) => {
+    if(e.target === document.getElementById('detailMask')) document.getElementById('detailMask').style.display = 'none';
+});
+
+/**
+ * 将已选景点跳转至地图页，由 `/map` 根据 `spotIds` 计算最优游览顺序。
+ * @returns {void}
+ */
+function generateRoute() {
+    const selectedCount = parseInt(document.getElementById('selected-count').innerText);
+    if (selectedCount === 0) return;
+    const tags = document.querySelectorAll('#selected-spots-list .selected-spot-tag');
+    let spotIds = [];
+    tags.forEach(tag => {
+        const id = tag.id.replace('selected-','');
+        spotIds.push(id);
+    });
+    const loadingDiv = document.getElementById('loading');
+    loadingDiv.classList.remove('hidden');
+    setTimeout(() => {
+        loadingDiv.classList.add('hidden');
+        window.location.href = `/map-simple?spotIds=${encodeURIComponent(spotIds.join(','))}`;
+    }, 1300);
+}
+document.getElementById('generate-btn').addEventListener('click', generateRoute);
+</script>
+</body>
+</html>

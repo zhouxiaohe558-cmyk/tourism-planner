@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AI 旅游攻略 | 一日游时间安排</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "微软雅黑", "PingFang SC", "Helvetica Neue", Roboto, sans-serif;
+        }
+        body {
+            background: #f0f2f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+        header {
+            width: 100%;
+            height: 70px;
+            background: linear-gradient(135deg, #1e2f3f 0%, #15232e 100%);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 48px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            z-index: 20;
+            flex-shrink: 0;
+        }
+        .logo {
+            height: 44px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+        nav ul {
+            display: flex;
+            gap: 48px;
+            list-style: none;
+        }
+        nav ul li {
+            list-style: none;
+        }
+        nav ul li a {
+            color: #ffd966;
+            font-size: 17px;
+            font-weight: 600;
+            transition: 0.2s;
+            letter-spacing: 1px;
+            text-decoration: none;
+        }
+        nav ul li a:hover, nav ul li a.active {
+            color: white;
+            border-bottom: 3px solid #ffaa33;
+            padding-bottom: 6px;
+            text-decoration: none;
+        }
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: white;
+            border-radius: 40px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .search-box input {
+            width: 210px;
+            height: 38px;
+            padding: 0 16px;
+            border: none;
+            outline: none;
+            font-size: 14px;
+        }
+        .search-box button {
+            width: 46px;
+            height: 38px;
+            background: #ffaa33;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            transition: 0.2s;
+        }
+        .search-box button:hover {
+            background: #e69500;
+        }
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+        .guide-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .guide-header {
+            background: white;
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .guide-header h1 {
+            color: #1e2f3f;
+            font-size: 28px;
+            margin-bottom: 16px;
+        }
+        .guide-header p {
+            color: #666;
+            font-size: 16px;
+        }
+        .timeline-container {
+            background: white;
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.1);
+        }
+        .timeline-title {
+            color: #1e2f3f;
+            font-size: 22px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #ffaa33;
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: transform 0.2s;
+        }
+        .timeline-item:hover {
+            transform: translateY(-2px);
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -45px;
+            top: 24px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ffaa33;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .time-slot {
+            color: #ffaa33;
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        .activity {
+            color: #1e2f3f;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .description {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .back-button {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 10px 24px;
+            background: #1e2f3f;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            text-decoration: none;
+        }
+        .back-button:hover {
+            background: #2c3e50;
+            transform: scale(1.05);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        .empty-state h3 {
+            font-size: 24px;
+            margin-bottom: 16px;
+            color: #1e2f3f;
+        }
+        @media (max-width: 768px) {
+            header {
+                padding: 0 20px;
+            }
+            nav ul {
+                gap: 24px;
+            }
+            .main-content {
+                padding: 20px;
+            }
+            .guide-header,
+            .timeline-container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="https://img.icons8.com/fluency/96/ffffff/mountain.png" alt="旅游logo" class="logo">
+        <nav>
+            <ul>
+                <li><a href="/">首页</a></li>
+                <li><a href="/city">热门城市</a></li>
+                <li><a href="/route">路线规划</a></li>
+                <li><a href="/map">最优游览路线地图</a></li>
+                <li><a href="/guide" class="active">旅游攻略</a></li>
+                <li><a href="#">精选留言</a></li>
+            </ul>
+        </nav>
+        <div class="search-box">
+            <input type="text" placeholder="搜索景点或攻略">
+            <button>🔍</button>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <div class="guide-container">
+            <div class="guide-header">
+                <h1>📅 AI 智能旅游攻略</h1>
+                <p>根据您选择的景点，为您量身定制的一日游时间安排</p>
+            </div>
+
+            <div class="timeline-container">
+                <h2 class="timeline-title">⏰ 一日游时间安排</h2>
+                <div class="timeline" id="timeline-content">
+                    <div class="empty-state">
+                        <h3>加载中...</h3>
+                        <p>正在为您生成最佳旅游攻略...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="/map" class="back-button">🔙 返回路线地图</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 完整高精度景点数据库
+        const FULL_SPOTS_DB = [
+            {id:1, name:"天安门广场", city:"北京", province:"北京", address:"北京市东城区长安街", lng:116.4038, lat:39.9074, description:"首都中心地标广场", ticket:"免费预约", openTime:"全天"},
+            {id:2, name:"故宫博物院", city:"北京", province:"北京", address:"北京市东城区景山前街", lng:116.3972, lat:39.9175, description:"世界最大皇家建筑群", ticket:"60元"},
+            {id:3, name:"八达岭长城", city:"北京", province:"北京", address:"北京市延庆区", lng:116.0258, lat:40.3646, description:"世界文化遗产长城精华", ticket:"40元"},
+            {id:4, name:"天津之眼", city:"天津", province:"天津", address:"天津市红桥区永乐桥", lng:117.1802, lat:39.1522, description:"海河地标摩天轮", ticket:"70元"},
+            {id:5, name:"承德避暑山庄", city:"承德", province:"河北", address:"河北省承德市", lng:117.2636, lat:40.6697, description:"清代皇家园林", ticket:"130元"},
+            {id:6, name:"平遥古城", city:"晋中", province:"山西", address:"山西省晋中市平遥县", lng:112.1768, lat:37.1232, description:"保存最完整明清古城", ticket:"125元"},
+            {id:7, name:"秦始皇兵马俑", city:"西安", province:"陕西", address:"西安市临潼区", lng:109.2719, lat:34.3846, description:"世界第八大奇迹", ticket:"120元"},
+            {id:8, name:"华清宫", city:"西安", province:"陕西", address:"西安市临潼区", lng:109.2122, lat:34.2659, description:"唐代皇家温泉行宫", ticket:"120元"},
+            {id:9, name:"敦煌莫高窟", city:"敦煌", province:"甘肃", address:"甘肃敦煌市", lng:94.8025, lat:40.1476, description:"千年佛教艺术宝库", ticket:"238元"},
+            {id:10, name:"青海湖", city:"海南藏族", province:"青海", address:"青海海南州", lng:100.1546, lat:36.5712, description:"中国最大内陆咸水湖", ticket:"90元"},
+            {id:11, name:"沙坡头", city:"中卫", province:"宁夏", address:"宁夏中卫市", lng:104.9541, lat:37.4708, description:"沙漠黄河交汇奇观", ticket:"110元"},
+            {id:12, name:"天山天池", city:"昌吉", province:"新疆", address:"新疆昌吉阜康市", lng:88.1169, lat:43.8957, description:"高山湖泊仙境", ticket:"155元"},
+            {id:13, name:"哈尔滨冰雪大世界", city:"哈尔滨", province:"黑龙江", address:"黑龙江哈尔滨市", lng:126.5626, lat:45.7765, description:"冰雪主题乐园", ticket:"298元"},
+            {id:14, name:"沈阳故宫", city:"沈阳", province:"辽宁", address:"辽宁沈阳市", lng:123.4567, lat:41.8036, description:"清代开国皇宫", ticket:"50元"},
+            {id:15, name:"长白山天池", city:"延边", province:"吉林", address:"吉林延边州", lng:128.1722, lat:42.0167, description:"火山口高山湖泊", ticket:"105元"},
+            {id:16, name:"东方明珠塔", city:"上海", province:"上海", address:"上海市浦东新区", lng:121.4992, lat:31.2397, description:"上海地标", ticket:"199元"},
+            {id:17, name:"外滩", city:"上海", province:"上海", address:"上海黄浦区中山东一路", lng:121.4904, lat:31.2368, description:"万国建筑博览群", ticket:"免费"},
+            {id:18, name:"杭州西湖", city:"杭州", province:"浙江", address:"杭州市西湖区", lng:120.1450, lat:30.2590, description:"世界文化遗产", ticket:"免费"},
+            {id:19, name:"黄山风景区", city:"黄山", province:"安徽", address:"安徽黄山市", lng:118.1732, lat:30.1435, description:"天下第一奇山", ticket:"190元"},
+            {id:20, name:"鼓浪屿", city:"厦门", province:"福建", address:"福建厦门市", lng:118.0789, lat:24.4496, description:"海上花园", ticket:"35元"},
+            {id:21, name:"庐山", city:"九江", province:"江西", address:"江西九江市庐山", lng:115.9043, lat:29.5627, description:"匡庐奇秀甲天下", ticket:"160元"},
+            {id:22, name:"泰山", city:"泰安", province:"山东", address:"山东泰安市", lng:117.1215, lat:36.1533, description:"五岳独尊", ticket:"115元"},
+            {id:23, name:"龙门石窟", city:"洛阳", province:"河南", address:"河南洛阳市", lng:112.4692, lat:34.6653, description:"世界文化遗产石刻", ticket:"90元"},
+            {id:24, name:"黄鹤楼", city:"武汉", province:"湖北", address:"湖北武汉市武昌区", lng:114.3065, lat:30.5462, description:"江南名楼", ticket:"70元"},
+            {id:25, name:"橘子洲", city:"长沙", province:"湖南", address:"湖南长沙市", lng:112.9528, lat:28.9287, description:"毛主席青年雕塑", ticket:"免费"},
+            {id:26, name:"张家界武陵源", city:"张家界", province:"湖南", address:"湖南张家界市", lng:110.4215, lat:29.3265, description:"阿凡达奇幻峰林", ticket:"228元"},
+            {id:27, name:"广州塔", city:"广州", province:"广东", address:"广州市海珠区", lng:113.3271, lat:23.1200, description:"小蛮腰地标", ticket:"150元"},
+            {id:28, name:"珠海长隆海洋王国", city:"珠海", province:"广东", address:"广东珠海横琴", lng:113.5262, lat:22.1193, description:"海洋主题乐园", ticket:"380元"},
+            {id:29, name:"桂林漓江", city:"桂林", province:"广西", address:"广西桂林漓江景区", lng:110.2896, lat:25.2781, description:"喀斯特山水", ticket:"190元"},
+            {id:30, name:"亚龙湾", city:"三亚", province:"海南", address:"海南三亚亚龙湾", lng:109.5112, lat:18.3132, description:"东方夏威夷", ticket:"免费"},
+            {id:31, name:"洪崖洞", city:"重庆", province:"重庆", address:"重庆渝中区嘉滨路", lng:106.5836, lat:29.5592, description:"魔幻夜景吊脚楼", ticket:"免费"},
+            {id:32, name:"九寨沟", city:"阿坝", province:"四川", address:"四川阿坝九寨沟县", lng:103.8828, lat:33.2686, description:"人间仙境", ticket:"169元"},
+            {id:33, name:"成都大熊猫基地", city:"成都", province:"四川", address:"四川成都成华区", lng:104.1312, lat:30.7417, description:"熊猫繁育基地", ticket:"55元"},
+            {id:34, name:"黄果树瀑布", city:"安顺", province:"贵州", address:"贵州安顺市", lng:105.6761, lat:25.9831, description:"亚洲第一大瀑布", ticket:"160元"},
+            {id:35, name:"丽江古城", city:"丽江", province:"云南", address:"云南丽江市", lng:100.2332, lat:26.8721, description:"纳西风情古城", ticket:"免费"},
+            {id:36, name:"大理洱海", city:"大理", province:"云南", address:"云南大理市", lng:100.2282, lat:25.6042, description:"苍山洱海风光", ticket:"免费"},
+            {id:37, name:"维多利亚港", city:"香港", province:"香港", address:"香港维多利亚港", lng:114.1832, lat:22.2935, description:"世界三大夜景", ticket:"免费"},
+            {id:38, name:"大三巴牌坊", city:"澳门", province:"澳门", address:"澳门大三巴", lng:113.5489, lat:22.1912, description:"澳门地标", ticket:"免费"},
+            {id:39, name:"垦丁海滩", city:"屏东", province:"台湾", address:"台湾屏东县垦丁", lng:120.7417, lat:22.0027, description:"热带海滨", ticket:"免费"},
+            {id:40, name:"呼伦贝尔草原", city:"呼伦贝尔", province:"内蒙古", address:"内蒙古呼伦贝尔", lng:119.7622, lat:49.2137, description:"世界最美草原", ticket:"免费"},
+            {id:41, name:"布达拉宫", city:"拉萨", province:"西藏", address:"西藏拉萨市", lng:91.1177, lat:29.6582, description:"雪域宫殿", ticket:"200元预约"},
+            {id:42, name:"都江堰", city:"都江堰", province:"四川", address:"四川省成都市都江堰市", lng:103.6153, lat:31.0080, description:"世界文化遗产，古代水利工程奇迹", ticket:"80元"},
+            {id:43, name:"青城山", city:"都江堰", province:"四川", address:"四川省成都市都江堰市青城山镇", lng:103.5849, lat:30.9947, description:"道教名山，青城天下幽", ticket:"90元"},
+            {id:44, name:"峨眉山", city:"乐山", province:"四川", address:"四川省乐山市峨眉山市", lng:103.4352, lat:29.5871, description:"佛教名山，普贤菩萨道场", ticket:"160元"},
+            {id:45, name:"乐山大佛", city:"乐山", province:"四川", address:"四川省乐山市市中区", lng:103.7799, lat:29.5451, description:"世界最大石刻坐佛", ticket:"80元"},
+            {id:46, name:"稻城亚丁", city:"甘孜", province:"四川", address:"四川省甘孜藏族自治州稻城县", lng:100.2201, lat:28.5292, description:"蓝色星球上的最后一片净土", ticket:"266元"}
+        ];
+        const AMAP_WEB_KEY = '09f130b540b9eddb606f3bd9b21ffb73';
+        const travelMinutesCache = {};
+
+        function toTimeText(totalMinutes) {
+            const hour = Math.floor(totalMinutes / 60);
+            const minute = totalMinutes % 60;
+            return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        }
+
+        function roundToHalfHour(hours) {
+            return Math.max(1, Math.round(hours * 2) / 2);
+        }
+
+        function parseTicketPrice(ticket) {
+            if (!ticket) return 0;
+            const numbers = String(ticket).match(/\d+(\.\d+)?/g);
+            if (!numbers || !numbers.length) return 0;
+            return Number(numbers[0]) || 0;
+        }
+
+        function getTypeWeight(spot) {
+            const text = `${spot.name || ''}${spot.description || ''}`;
+            let score = 2.0;
+            if (/山|湖|沟|草原|海|景区|长城|瀑布|古城/.test(text)) score += 0.8;
+            if (/博物院|故宫|石窟|大佛|宫|遗产|祠|古街/.test(text)) score += 0.4;
+            if (/乐园|基地|港|塔/.test(text)) score += 0.2;
+            return score;
+        }
+
+        function getOpenTimeWeight(spot) {
+            const text = String(spot.openTime || '');
+            if (!text) return 0;
+            if (text.includes('全天')) return 0.3;
+            const times = text.match(/(\d{1,2}):(\d{2})/g);
+            if (!times || times.length < 2) return 0;
+            const [startH, startM] = times[0].split(':').map(Number);
+            const [endH, endM] = times[1].split(':').map(Number);
+            const openMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+            if (openMinutes >= 600) return 0.4;
+            if (openMinutes <= 480) return -0.2;
+            return 0.1;
+        }
+
+        function getRecommendHoursBySpot(spot, totalCount) {
+            let hours = getTypeWeight(spot);
+            const ticketPrice = parseTicketPrice(spot.ticket);
+            if (ticketPrice >= 150) hours += 0.5;
+            else if (ticketPrice >= 80) hours += 0.2;
+            hours += getOpenTimeWeight(spot);
+
+            // 景点多时自动压缩单点停留，保证行程可执行
+            if (totalCount >= 6) hours -= 0.4;
+            else if (totalCount >= 4) hours -= 0.2;
+
+            return roundToHalfHour(hours);
+        }
+
+        function estimateMoveMinutes(currentSpot, nextSpot) {
+            const sameCity = currentSpot.city === nextSpot.city && currentSpot.province === nextSpot.province;
+            const sameProvince = currentSpot.province === nextSpot.province;
+            if (sameCity) return 35;
+            if (sameProvince) return 90;
+            return 180;
+        }
+
+        function buildCacheKey(currentSpot, nextSpot) {
+            return `${currentSpot.lng},${currentSpot.lat}->${nextSpot.lng},${nextSpot.lat}`;
+        }
+
+        async function getTravelMinutesByRoad(currentSpot, nextSpot) {
+            const cacheKey = buildCacheKey(currentSpot, nextSpot);
+            if (travelMinutesCache[cacheKey]) {
+                return travelMinutesCache[cacheKey];
+            }
+            try {
+                const origin = `${currentSpot.lng},${currentSpot.lat}`;
+                const destination = `${nextSpot.lng},${nextSpot.lat}`;
+                const apiUrl = `https://restapi.amap.com/v3/direction/driving?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&strategy=0&extensions=base&key=${AMAP_WEB_KEY}`;
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                const seconds = Number(data?.route?.paths?.[0]?.duration || 0);
+                if (seconds > 0) {
+                    const minutes = Math.max(10, Math.round(seconds / 60));
+                    travelMinutesCache[cacheKey] = minutes;
+                    return minutes;
+                }
+            } catch (error) {
+                // fallback below
+            }
+            const fallback = estimateMoveMinutes(currentSpot, nextSpot);
+            travelMinutesCache[cacheKey] = fallback;
+            return fallback;
+        }
+
+        async function buildMoveMinutesList(spots) {
+            if (!spots || spots.length < 2) return [];
+            const tasks = [];
+            for (let i = 0; i < spots.length - 1; i++) {
+                tasks.push(getTravelMinutesByRoad(spots[i], spots[i + 1]));
+            }
+            return Promise.all(tasks);
+        }
+
+        // 生成一日游时间安排（含每个景点到达时间和推荐游玩时长）
+        async function generateItinerary(spots) {
+            if (!spots || spots.length === 0) {
+                document.getElementById('timeline-content').innerHTML = `
+                    <div class="empty-state">
+                        <h3>🎯 未选择景点</h3>
+                        <p>请先在路线规划页面选择景点生成路线</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const timeSlots = [];
+            let currentMinutes = 8 * 60;
+            const moveMinutesList = await buildMoveMinutesList(spots);
+            timeSlots.push({
+                time: `${toTimeText(currentMinutes)} - ${toTimeText(currentMinutes + 30)}`,
+                activity: '早餐',
+                description: '享用当地特色早餐，为一天行程补充体力'
+            });
+            currentMinutes += 30;
+
+            spots.forEach((spot, index) => {
+                const arrivalTime = toTimeText(currentMinutes);
+                const recommendHours = getRecommendHoursBySpot(spot, spots.length);
+                const stayMinutes = Math.round(recommendHours * 60);
+                const leaveTime = toTimeText(currentMinutes + stayMinutes);
+                timeSlots.push({
+                    time: `${arrivalTime} - ${leaveTime}`,
+                    activity: `游览 ${spot.name}`,
+                    description: `预计 ${arrivalTime} 到达，推荐游玩 ${recommendHours} 小时。${spot.description || '探索这个美丽的景点'}`
+                });
+
+                currentMinutes += stayMinutes;
+
+                if (index < spots.length - 1) {
+                    const nextSpot = spots[index + 1];
+                    const moveMinutes = moveMinutesList[index] || estimateMoveMinutes(spot, nextSpot);
+                    const departTime = toTimeText(currentMinutes);
+                    const reachTime = toTimeText(currentMinutes + moveMinutes);
+                    const crossCityNote = (spot.city === nextSpot.city && spot.province === nextSpot.province)
+                        ? '同城换点'
+                        : `${spot.city} -> ${nextSpot.city}`;
+                    timeSlots.push({
+                        time: `${departTime} - ${reachTime}`,
+                        activity: '前往下一个景点',
+                        description: `${crossCityNote}，建议预留 ${moveMinutes} 分钟交通时间`
+                    });
+                    currentMinutes += moveMinutes;
+                }
+            });
+
+            if (currentMinutes < 12 * 60) {
+                currentMinutes = 12 * 60;
+            }
+            if (currentMinutes >= 12 * 60 && currentMinutes <= 14 * 60) {
+                timeSlots.push({
+                    time: `${toTimeText(currentMinutes)} - ${toTimeText(currentMinutes + 60)}`,
+                    activity: '午餐',
+                    description: '品尝当地特色美食'
+                });
+                currentMinutes += 60;
+            }
+
+            timeSlots.push({
+                time: `${toTimeText(currentMinutes)} - ${toTimeText(currentMinutes + 60)}`,
+                activity: '返程',
+                description: '结束一天的愉快行程，返回住宿地点'
+            });
+
+            // 渲染时间线
+            const timelineContent = document.getElementById('timeline-content');
+            timelineContent.innerHTML = timeSlots.map(item => `
+                <div class="timeline-item">
+                    <div class="time-slot">${item.time}</div>
+                    <div class="activity">${item.activity}</div>
+                    <div class="description">${item.description}</div>
+                </div>
+            `).join('');
+        }
+
+        // 从URL获取景点ID并生成攻略
+        async function loadGuideFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const spotIdsParam = urlParams.get('spotIds');
+
+            if (spotIdsParam) {
+                const ids = spotIdsParam.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
+                if (ids.length > 0) {
+                    const selectedSpots = FULL_SPOTS_DB.filter(spot => ids.includes(spot.id));
+                    await generateItinerary(selectedSpots);
+                } else {
+                    await generateItinerary([]);
+                }
+            } else {
+                await generateItinerary([]);
+            }
+        }
+
+        // 页面加载完成后生成攻略
+        window.onload = () => {
+            loadGuideFromURL();
+        };
+    </script>
+</body>
+</html>

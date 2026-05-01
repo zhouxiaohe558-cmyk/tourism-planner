@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>旅迹 | 我想和你一起去旅行 · 沉浸式旅行灵感站</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            list-style: none;
+            text-decoration: none;
+        }
+
+        body {
+            font-family: 'Poppins', '微软雅黑', system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
+            background-color: #fefcf5;
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e0e0e0;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ffaa33;
+            border-radius: 10px;
+        }
+
+        /* 顶部导航栏——玻璃拟态 现代感 */
+        header {
+            width: 100%;
+            height: 84px;
+            background: rgba(15, 25, 35, 0.7);
+            backdrop-filter: blur(14px);
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 5%;
+            z-index: 1000;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .logo {
+            height: 48px;
+            filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
+            transition: transform 0.2s;
+        }
+        .logo:hover {
+            transform: scale(1.02);
+        }
+
+        nav ul {
+            display: flex;
+            gap: 3rem;
+        }
+        nav ul li a {
+            color: #fff9ef;
+            font-size: 1.05rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            transition: 0.25s;
+            position: relative;
+        }
+        nav ul li a:after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 0;
+            height: 2.5px;
+            background: #ffc107;
+            transition: 0.3s;
+            border-radius: 4px;
+        }
+        nav ul li a:hover:after,
+        nav ul li a.active:after {
+            width: 100%;
+        }
+        nav ul li a:hover {
+            color: #ffdd99;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(4px);
+            border-radius: 48px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,200,0.3);
+            transition: 0.2s;
+        }
+        .search-box input {
+            width: 220px;
+            height: 42px;
+            padding: 0 18px;
+            border: none;
+            background: transparent;
+            color: white;
+            outline: none;
+            font-size: 0.9rem;
+        }
+        .search-box input::placeholder {
+            color: rgba(255,250,210,0.8);
+        }
+        .search-box button {
+            width: 48px;
+            height: 42px;
+            background: #ffc107;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: 0.2s;
+            color: #1e2f3f;
+            font-weight: bold;
+        }
+        .search-box button:hover {
+            background: #ffda6a;
+        }
+
+        /* ========= 沉浸式全屏轮播 ========= */
+        .hero {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+        .swiper-slides {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center 30%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            will-change: opacity;
+        }
+        .slide.active {
+            opacity: 1;
+            z-index: 2;
+        }
+        /* 优雅的渐变遮罩 */
+        .slide::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 40%, rgba(0,0,0,0.3), rgba(0,0,0,0.65));
+            z-index: 1;
+        }
+        .hero-content {
+            position: relative;
+            z-index: 12;
+            text-align: center;
+            color: white;
+            max-width: 85%;
+            padding: 0 20px;
+            animation: fadeUp 1s ease-out;
+        }
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(35px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .hero-title {
+            font-size: clamp(2.5rem, 8vw, 5.2rem);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            text-shadow: 0 8px 22px rgba(0,0,0,0.5);
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff, #ffe6b3);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+        .hero-sub {
+            font-size: clamp(1.2rem, 4vw, 2rem);
+            font-weight: 400;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            margin-bottom: 2rem;
+            letter-spacing: 2px;
+        }
+        .cta-btn {
+            background: linear-gradient(105deg, #ffaa33, #ff7e05);
+            border: none;
+            padding: 14px 42px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            border-radius: 50px;
+            color: #1f2a36;
+            cursor: pointer;
+            box-shadow: 0 12px 22px rgba(0,0,0,0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            letter-spacing: 1px;
+        }
+        .cta-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 18px 30px rgba(0,0,0,0.4);
+            background: linear-gradient(105deg, #ffbb4a, #ff9118);
+        }
+        /* 轮播导航按钮 圆润现代 */
+        .nav-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,245,0.25);
+            backdrop-filter: blur(10px);
+            border-radius: 60px;
+            border: 1px solid rgba(255,255,200,0.5);
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            z-index: 20;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-arrow:hover {
+            background: #ffaa33;
+            color: #1e2f3f;
+            border-color: #ffaa33;
+        }
+        .left-arrow { left: 28px; }
+        .right-arrow { right: 28px; }
+        /* 指示点 */
+        .dots {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            z-index: 20;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            background: rgba(255,255,220,0.6);
+            border-radius: 20px;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .dot.active {
+            width: 32px;
+            background: #ffc107;
+            box-shadow: 0 0 8px #ffc107;
+        }
+
+        /* 热门城市板块 卡片流设计 */
+        .section {
+            padding: 80px 5%;
+            background: #fefaf0;
+        }
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 48px;
+            color: #2c3e2f;
+            position: relative;
+        }
+        .section-title:after {
+            content: '';
+            display: block;
+            width: 70px;
+            height: 4px;
+            background: #ffaa33;
+            margin: 16px auto 0;
+            border-radius: 4px;
+        }
+        .city-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 32px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .city-card {
+            background: white;
+            border-radius: 32px;
+            overflow: hidden;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.08);
+            transition: all 0.35s;
+            cursor: pointer;
+        }
+        .city-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 22px 40px rgba(0,0,0,0.15);
+        }
+        .city-img {
+            height: 220px;
+            background-size: cover;
+            background-position: center;
+            transition: transform 0.5s;
+        }
+        .city-card:hover .city-img {
+            transform: scale(1.02);
+        }
+        .city-info {
+            padding: 24px 20px 28px;
+        }
+        .city-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #1e2f3f;
+        }
+        .city-desc {
+            color: #5e6f8d;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        /* 登录弹窗 玻璃质感 */
+        .mask {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(10px);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .login-box {
+            width: 460px;
+            background: rgba(255,255,245,0.98);
+            border-radius: 48px;
+            padding: 40px 36px;
+            text-align: center;
+            box-shadow: 0 35px 65px rgba(0,0,0,0.3);
+            animation: modalPop 0.3s ease;
+        }
+        @keyframes modalPop {
+            from { opacity: 0; transform: scale(0.96);}
+            to { opacity: 1; transform: scale(1);}
+        }
+        .login-box h2 {
+            font-size: 2rem;
+            margin-bottom: 28px;
+            color: #3b2e24;
+        }
+        .login-input {
+            width: 100%;
+            height: 54px;
+            margin-bottom: 20px;
+            padding: 0 20px;
+            border: 1px solid #e0cfb0;
+            border-radius: 44px;
+            font-size: 1rem;
+            background: white;
+            transition: 0.2s;
+        }
+        .login-input:focus {
+            border-color: #ffaa33;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255,170,51,0.2);
+        }
+        .login-submit {
+            width: 100%;
+            height: 52px;
+            background: #ffaa33;
+            border: none;
+            border-radius: 44px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #2c2c2c;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 8px;
+        }
+        .login-submit:hover {
+            background: #ff9f1a;
+            transform: scale(0.98);
+        }
+        .close-login {
+            margin-top: 24px;
+            color: #aa8c5e;
+            cursor: pointer;
+            font-weight: 500;
+            display: inline-block;
+            border-bottom: 1px dashed #aa8c5e;
+        }
+        /* 页脚 */
+        footer {
+            background: #1e2a32;
+            color: #e9e2d0;
+            text-align: center;
+            padding: 48px 20px;
+            margin-top: 0;
+        }
+        footer p {
+            margin: 8px 0;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+
+        /* 响应式优化 */
+        @media (max-width: 1000px) {
+            header {
+                padding: 0 20px;
+            }
+            nav ul {
+                gap: 1.2rem;
+            }
+            .search-box input {
+                width: 140px;
+            }
+        }
+        @media (max-width: 780px) {
+            nav ul {
+                display: none;
+            }
+            .search-box {
+                margin-left: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <img src="https://img.icons8.com/fluency/96/ffffff/mountain.png" alt="旅迹logo" class="logo">
+    <nav>
+        <ul>
+                <li><a href="/" class="active">首页</a></li>
+                <li><a href="/city">热门城市</a></li>
+                <li><a href="/route">路线规划</a></li>
+                <li><a href="/map">最优游览路线地图</a></li>
+                <li><a href="/guide">旅游攻略</a></li>
+                <li><a href="#">精选留言</a></li>
+          </ul>
+    </nav>
+    <div class="search-box">
+        <input type="text" placeholder="搜索梦境目的地...">
+        <button>✨</button>
+    </div>
+</header>
+
+<!-- 全新沉浸式全屏轮播区域 -->
+<div class="hero">
+    <div class="swiper-slides">
+        <!-- slide 1 雪山极光氛围 -->
+        <div class="slide" style="background-image: url('https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=1600');">
+            <div class="hero-content">
+                <h1 class="hero-title">我想和你一起去旅行</h1>
+                <p class="hero-sub">同行之路，有你才有意义</p>
+                <button class="cta-btn" id="openLoginBtn">✧ 开启旅程 ✧</button>
+            </div>
+        </div>
+        <!-- slide 2 山海浪漫 -->
+        <div class="slide" style="background-image: url('https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg?auto=compress&cs=tinysrgb&w=1600');">
+            <div class="hero-content">
+                <h1 class="hero-title">走遍山河万里</h1>
+                <p class="hero-sub">遇见从未设想的风景</p>
+                <button class="cta-btn" id="openLoginBtn2">✧ 即刻出发 ✧</button>
+            </div>
+        </div>
+        <!-- slide 3 田园治愈 -->
+        <div class="slide" style="background-image: url('https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg?auto=compress&cs=tinysrgb&w=1600');">
+            <div class="hero-content">
+                <h1 class="hero-title">风也温柔，云也自由</h1>
+                <p class="hero-sub">把向往的地方，变成走过的路</p>
+                <button class="cta-btn" id="openLoginBtn3">✧ 登录探索 ✧</button>
+            </div>
+        </div>
+    </div>
+    <button class="nav-arrow left-arrow" id="prevBtn">‹</button>
+    <button class="nav-arrow right-arrow" id="nextBtn">›</button>
+    <div class="dots" id="dotsContainer"></div>
+</div>
+
+<!-- 热门城市区域（视觉升级版） -->
+<section class="section">
+    <h2 class="section-title">✨ 心驰神往 · 热门目的地 ✨</h2>
+    <div class="city-grid">
+        <div class="city-card" onclick="location.href='/city?city='+encodeURIComponent('北京')">
+            <div class="city-img" style="background-image: url('https://img95.699pic.com/photo/50362/0012.jpg_wh860.jpg');"></div>
+            <div class="city-info">
+                <div class="city-name">北京</div>
+                <div class="city-desc">故宫红墙，长城巍峨，古都的四季皆浪漫</div>
+            </div>
+        </div>
+        <div class="city-card" onclick="location.href='/city?city='+encodeURIComponent('成都')">
+            <div class="city-img" style="background-image: url('https://images.pexels.com/photos/1658967/pexels-photo-1658967.jpeg?auto=compress&cs=tinysrgb&w=600');"></div>
+            <div class="city-info">
+                <div class="city-name">成都</div>
+                <div class="city-desc">熊猫与火锅，安逸烟火里的巴适生活</div>
+            </div>
+        </div>
+        <div class="city-card" onclick="location.href='/city?city='+encodeURIComponent('大理')">
+            <div class="city-img" style="background-image: url('https://ts1.tc.mm.bing.net/th/id/R-C.86c9458f79d8851e1bf21f6b629b25b1?rik=qIzLSpygzADHmg&riu=http%3a%2f%2fn.sinaimg.cn%2fsinakd10014%2f142%2fw565h377%2f20220805%2f2d00-10c8994f3e0ab5a8ee2ad6322c5950a5.png&ehk=TBBhPJpFIPMXGGoX8bmBAerjHLowsqKij4cV2z36EpA%3d&risl=&pid=ImgRaw&r=0');"></div>
+            <div class="city-info">
+                <div class="city-name">大理</div>
+                <div class="city-desc">苍山洱海，风花雪月治愈所有疲惫</div>
+            </div>
+        </div>
+        <div class="city-card" onclick="location.href='/city?city='+encodeURIComponent('厦门')">
+            <div class="city-img" style="background-image: url('https://img1.qunarzz.com/travel/d3/1705/d7/ff350e7f1e71d4b5.jpg?ver=1');"></div>
+            <div class="city-info">
+                <div class="city-name">厦门</div>
+                <div class="city-desc">海岛文艺，鼓浪屿的落日与温柔海风</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 登录弹窗 高级质感 -->
+<div class="mask" id="loginMask">
+    <div class="login-box">
+        <h2>🌍 登录旅迹</h2>
+        <input type="text" class="login-input" placeholder="手机号 / 邮箱" value="traveler@journey.com">
+        <input type="password" class="login-input" placeholder="密码" value="12345678">
+        <button class="login-submit" id="doLoginBtn">进入灵感世界 →</button>
+        <div class="close-login" id="closeLoginBtn">暂不登录，继续浏览</div>
+    </div>
+</div>
+
+<footer>
+    <p>© 2025 「我想和你一起去旅行」 灵感旅行实验室</p>
+    <p>首页 | 热门城市 | 精选路线 | 旅迹向导 | 故事留言板</p>
+    <p style="font-size: 12px; opacity: 0.7;">让每一次出发，都成为生命里的光</p>
+</footer>
+
+<script>
+    // ---------- 沉浸式轮播控制（新形态 + 指示点）----------
+    const slides = document.querySelectorAll('.slide');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const dotsContainer = document.getElementById('dotsContainer');
+    let currentIdx = 0;
+    let autoTimer;
+
+    // 初始化小圆点
+    function buildDots() {
+        dotsContainer.innerHTML = '';
+        slides.forEach((_, i) => {
+            const dot = document.createElement('div');
+            dot.classList.add('dot');
+            if (i === currentIdx) dot.classList.add('active');
+            dot.addEventListener('click', () => {
+                clearInterval(autoTimer);
+                goToSlide(i);
+                startAutoPlay();
+            });
+            dotsContainer.appendChild(dot);
+        });
+    }
+
+    function goToSlide(index) {
+        if (index < 0) index = slides.length - 1;
+        if (index >= slides.length) index = 0;
+        slides.forEach((slide, i) => {
+            slide.classList.toggle('active', i === index);
+        });
+        currentIdx = index;
+        // 更新dot高亮
+        const dots = document.querySelectorAll('.dot');
+        dots.forEach((dot, i) => {
+            dot.classList.toggle('active', i === currentIdx);
+        });
+    }
+
+    function nextSlide() {
+        goToSlide(currentIdx + 1);
+    }
+    function prevSlide() {
+        goToSlide(currentIdx - 1);
+    }
+
+    function startAutoPlay() {
+        if (autoTimer) clearInterval(autoTimer);
+        autoTimer = setInterval(() => {
+            nextSlide();
+        }, 4800);
+    }
+
+    // 绑定事件
+    nextBtn.addEventListener('click', () => {
+        clearInterval(autoTimer);
+        nextSlide();
+        startAutoPlay();
+    });
+    prevBtn.addEventListener('click', () => {
+        clearInterval(autoTimer);
+        prevSlide();
+        startAutoPlay();
+    });
+
+    // 初始化第一个激活状态
+    slides[0].classList.add('active');
+    buildDots();
+    startAutoPlay();
+
+    // 避免拖拽导致默认图片影响
+    const allImgs = document.querySelectorAll('.slide');
+    allImgs.forEach(img => { img.style.backgroundSize = 'cover'; });
+
+    // ---------- 登录弹窗优雅逻辑 (开启旅程/登录探索唤起；即刻出发直达精选路线)----------
+    const loginMask = document.getElementById('loginMask');
+    const closeLoginBtn = document.getElementById('closeLoginBtn');
+    const openRouteBtn = document.getElementById('openLoginBtn2');
+    const openModalBtns = document.querySelectorAll('#openLoginBtn, #openLoginBtn3');
+
+    function openModal() {
+        loginMask.style.display = 'flex';
+    }
+    function closeModal() {
+        loginMask.style.display = 'none';
+    }
+    if (openRouteBtn) {
+        openRouteBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/route';
+        });
+    }
+    openModalBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal();
+        });
+    });
+    // 额外支持头部未定义的登录（如果将来有新增按钮也可以，但已有的ok）
+    closeLoginBtn.addEventListener('click', closeModal);
+    // 点击遮罩关闭
+    loginMask.addEventListener('click', (e) => {
+        if (e.target === loginMask) closeModal();
+    });
+    // 模拟登录成功提示（并跳转精选路线）
+    const doLogin = document.getElementById('doLoginBtn');
+    if (doLogin) {
+        doLogin.addEventListener('click', () => {
+            alert('✨ 欢迎回来，旅人！即将为你探索更多灵感路线 ✨');
+            closeModal();
+            window.location.href = '/route';
+        });
+    }
+
+    // 新增可选：给城市卡片增加动态追踪，让热门城市板块更活泼
+    const cityCards = document.querySelectorAll('.city-card');
+    cityCards.forEach(card => {
+        card.addEventListener('click', function() {
+            // 简单过渡效果，无刷新感（保留href跳转）
+            const cityName = this.querySelector('.city-name')?.innerText;
+            if (cityName) console.log(`探索城市：${cityName}`);
+        });
+    });
+
+    // 让header在滚动时改变透明度
+    const headerEl = document.querySelector('header');
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 50) {
+            headerEl.style.background = 'rgba(10, 20, 28, 0.85)';
+            headerEl.style.backdropFilter = 'blur(18px)';
+        } else {
+            headerEl.style.background = 'rgba(15, 25, 35, 0.7)';
+            headerEl.style.backdropFilter = 'blur(14px)';
+        }
+    });
+</script>
+</body>
+</html>
