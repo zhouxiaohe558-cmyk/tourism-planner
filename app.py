@@ -34,5 +34,8 @@ def map_simple_page():
 def guide_page():
     return render_template('guide.html')
 
+# Vercel WSGI handler
+handler = app
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
